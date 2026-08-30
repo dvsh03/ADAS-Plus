@@ -98,6 +98,17 @@ Open your browser and navigate to `http://localhost:5000` to view the live ADAS 
 
 ---
 
+## 👥 Authors & Team Members
+
+- **Devesh Kumar Dilliwar**
+- **Aadarsh Kumar Soni**
+- **Uskrish Panchal**
+- **Sahil Janghel**
+- **Omi Choubey**
+- **Rahul Chinchmalatpure**
+
+---
+
 ## 📜 License
 
 Distributed under the **ADAS+ Restricted Use License** (Free for educational/academic use; commercial use requires prior written permission). See [`LICENSE`](LICENSE) for details.
