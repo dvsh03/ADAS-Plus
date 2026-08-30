@@ -1,0 +1,30 @@
+# Python & Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.user
+
+# Dataset & Heavy Training Artifacts
+Dataset/
+runs/
+*.onnx
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
