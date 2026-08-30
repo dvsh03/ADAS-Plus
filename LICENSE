@@ -44,11 +44,23 @@ Such authorization may be granted through a separate written commercial license,
 
 Commercial permission may be subject to separate terms, fees, royalties, attribution requirements, technical conditions, or other conditions agreed upon by the parties.
 
-5. ATTRIBUTION
+5. AUTHORIZED CONTRIBUTORS
+
+The ADAS+ project may designate certain individuals as authorized Contributors or maintainers.
+
+Authorized Contributors may grant permission to third parties to use, modify, distribute, or commercially exploit the Software only within the scope of authority granted to them by the ADAS-Plus project and its copyright holders.
+
+No Contributor may independently transfer ownership of the Software or grant rights broader than those authorized by the ADAS+ project or its copyright holders.
+
+Any commercial permission granted to a third party should be provided in writing and should clearly identify the permitted Software, permitted use, duration, and applicable conditions.
+
+Unless expressly authorized in writing, collaboration or contributor status alone does not grant any person the right to independently grant commercial licenses or transfer intellectual-property rights.
+
+6. ATTRIBUTION
 
 Any permitted copy, modification, or use of the Software for non-commercial purposes must retain this copyright notice and a reference to the original ADAS+ project.
 
-6. INTELLECTUAL PROPERTY
+7. INTELLECTUAL PROPERTY
 
 This license does not transfer ownership of the Software or any associated intellectual property to the user.
 
@@ -56,13 +68,13 @@ All copyrights and other intellectual property rights owned by the ADAS-Plus Con
 
 This license does not grant any patent license or other intellectual-property rights beyond the permissions expressly stated herein.
 
-7. THIRD-PARTY COMPONENTS
+8. THIRD-PARTY COMPONENTS
 
 The ADAS+ project may contain or depend upon third-party software, libraries, datasets, models, firmware, or other materials that are subject to their own licenses.
 
 Such third-party materials remain subject to their respective licenses. This license does not replace or override those licenses.
 
-8. SAFETY DISCLAIMER
+9. SAFETY DISCLAIMER
 
 ADAS+ is an experimental research and development project.
 
@@ -70,21 +82,21 @@ The Software and associated hardware are not represented as certified automotive
 
 Users are responsible for appropriate testing, validation, safety engineering, regulatory compliance, and safe operation of any system incorporating the Software.
 
-9. NO WARRANTY
+10. NO WARRANTY
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, RELIABILITY, SAFETY, NON-INFRINGEMENT, OR PERFORMANCE.
 
-10. LIMITATION OF LIABILITY
+11. LIMITATION OF LIABILITY
 
 TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE ADAS-PLUS CONTRIBUTORS SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, LOSS, LIABILITY, OR OTHER CONSEQUENCES ARISING FROM OR RELATED TO THE USE, INABILITY TO USE, MODIFICATION, DISTRIBUTION, OR IMPLEMENTATION OF THE SOFTWARE OR ANY SYSTEM BASED ON THE SOFTWARE.
 
-11. TERMINATION
+12. TERMINATION
 
 Any permission granted under this license automatically terminates if the user violates the terms of this license.
 
 Upon termination, the user must cease the unauthorized use, distribution, or commercial exploitation of the Software.
 
-12. RESERVATION OF RIGHTS
+13. RESERVATION OF RIGHTS
 
 All rights not expressly granted under this license are reserved by the ADAS-Plus Contributors.
 
