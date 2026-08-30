@@ -100,12 +100,12 @@ Open your browser and navigate to `http://localhost:5000` to view the live ADAS 
 
 ## 👥 Authors & Team Members
 
-- **Devesh Kumar Dilliwar**
-- **Aadarsh Kumar Soni**
-- **Uskrish Panchal**
-- **Sahil Janghel**
-- **Omi Choubey**
-- **Rahul Chinchmalatpure**
+- **Devesh Kumar Dilliwar** ([@dvsh03](https://github.com/dvsh03))
+- **Aadarsh Kumar Soni** ([@AadarshSoni24](https://github.com/AadarshSoni24))
+- **Utkrish Panchal** ([@Utkrish26](https://github.com/Utkrish26))
+- **Sahil Janghel** ([@handler002](https://github.com/handler002))
+- **Omi Choubey** ([@omichoubey793-png](https://github.com/omichoubey793-png))
+- **Rahul Chinchmalatpure** ([@Rahulpure01](https://github.com/Rahulpure01))
 
 ---
 
