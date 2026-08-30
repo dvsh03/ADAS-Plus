@@ -1,21 +1,94 @@
-MIT License
+ADAS+ RESTRICTED USE LICENSE
 
 Copyright (c) 2026 ADAS-Plus Contributors
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+All rights reserved except as expressly permitted below.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. DEFINITIONS
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO QUALITY, MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+"Software" means the source code, object code, documentation, configuration files, algorithms, models, scripts, and other materials contained in or distributed as part of the ADAS+ project.
+
+"Commercial Use" means any use of the Software for commercial, business, revenue-generating, paid, monetized, or for-profit purposes, including but not limited to incorporation into a commercial product, vehicle, service, device, software platform, or technology transfer.
+
+"Contributors" means the individuals or organizations identified by the ADAS+ project as copyright holders or contributors.
+
+2. PERMITTED USE
+
+Permission is granted to individuals to view, study, and evaluate the Software for personal, educational, academic, and non-commercial research purposes.
+
+Users may run the Software for personal, educational, academic, testing, and non-commercial research purposes.
+
+Users may make reasonable modifications to the Software for personal, educational, academic, and non-commercial research purposes.
+
+3. RESTRICTIONS
+
+Without prior written permission from the ADAS-Plus Contributors, no person or organization may:
+
+a. Use the Software for Commercial Use.
+
+b. Sell, license, sublicense, rent, lease, or otherwise commercially exploit the Software.
+
+c. Incorporate the Software or substantial portions of it into a commercial product or service.
+
+d. Redistribute, publish, or provide substantial portions of the Software as part of another project for commercial purposes.
+
+e. Transfer or grant commercial rights to the Software to another person or organization.
+
+f. Represent the Software, modified versions of the Software, or derivative works as an official ADAS+ product without written authorization.
+
+4. COMMERCIAL PERMISSION
+
+Commercial Use requires prior written authorization from the ADAS-Plus Contributors.
+
+Such authorization may be granted through a separate written commercial license, technology-transfer agreement, partnership agreement, or other written agreement.
+
+Commercial permission may be subject to separate terms, fees, royalties, attribution requirements, technical conditions, or other conditions agreed upon by the parties.
+
+5. ATTRIBUTION
+
+Any permitted copy, modification, or use of the Software for non-commercial purposes must retain this copyright notice and a reference to the original ADAS+ project.
+
+6. INTELLECTUAL PROPERTY
+
+This license does not transfer ownership of the Software or any associated intellectual property to the user.
+
+All copyrights and other intellectual property rights owned by the ADAS-Plus Contributors remain with their respective owners, except where expressly transferred through a separate written agreement.
+
+This license does not grant any patent license or other intellectual-property rights beyond the permissions expressly stated herein.
+
+7. THIRD-PARTY COMPONENTS
+
+The ADAS+ project may contain or depend upon third-party software, libraries, datasets, models, firmware, or other materials that are subject to their own licenses.
+
+Such third-party materials remain subject to their respective licenses. This license does not replace or override those licenses.
+
+8. SAFETY DISCLAIMER
+
+ADAS+ is an experimental research and development project.
+
+The Software and associated hardware are not represented as certified automotive safety systems and must not be relied upon as the sole means of preventing collisions, injury, property damage, or loss of life.
+
+Users are responsible for appropriate testing, validation, safety engineering, regulatory compliance, and safe operation of any system incorporating the Software.
+
+9. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, RELIABILITY, SAFETY, NON-INFRINGEMENT, OR PERFORMANCE.
+
+10. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE ADAS-PLUS CONTRIBUTORS SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, LOSS, LIABILITY, OR OTHER CONSEQUENCES ARISING FROM OR RELATED TO THE USE, INABILITY TO USE, MODIFICATION, DISTRIBUTION, OR IMPLEMENTATION OF THE SOFTWARE OR ANY SYSTEM BASED ON THE SOFTWARE.
+
+11. TERMINATION
+
+Any permission granted under this license automatically terminates if the user violates the terms of this license.
+
+Upon termination, the user must cease the unauthorized use, distribution, or commercial exploitation of the Software.
+
+12. RESERVATION OF RIGHTS
+
+All rights not expressly granted under this license are reserved by the ADAS-Plus Contributors.
+
+For commercial licensing, partnership, technology transfer, or other authorized use, contact the ADAS+ project representatives.
+
+Copyright (c) 2026 ADAS-Plus Contributors
+All rights reserved.

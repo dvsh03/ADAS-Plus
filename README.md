@@ -1,6 +1,6 @@
 # ADAS-Plus: Experimental Low-Cost Advanced Driver Assistance System
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Restricted Use](https://img.shields.io/badge/License-Restricted%20Non--Commercial-red.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![YOLOv3-Tiny](https://img.shields.io/badge/Model-YOLOv3--Tiny-brightgreen.svg)](software/detection/)
 [![ESP32-CAM](https://img.shields.io/badge/Hardware-ESP32--CAM-orange.svg)](firmware/esp32/)
@@ -100,4 +100,4 @@ Open your browser and navigate to `http://localhost:5000` to view the live ADAS 
 
 ## 📜 License
 
-Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
+Distributed under the **ADAS+ Restricted Use License** (Free for educational/academic use; commercial use requires prior written permission). See [`LICENSE`](LICENSE) for details.
