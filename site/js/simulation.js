@@ -421,7 +421,7 @@
 
     } else if (stateName === 'danger') {
       // Position obstacle inside critical DANGER braking envelope
-      animal.z = isProto ? 2.4 : 65.0;
+      animal.z = isProto ? 2.4 : 52.0;
       targetCruiseKmh = isProto ? PROTOTYPE_CRUISE_KMH : PLANNED_CRUISE_KMH;
       currentSpeedKmh = targetCruiseKmh * 0.75;
       carSpeedMs = currentSpeedKmh / 3.6;
@@ -587,7 +587,7 @@
         currentSpeedKmh = targetCruiseKmh;
         carSpeedMs = currentSpeedKmh / 3.6;
       } else if (activeDemoState === 'danger') {
-        animal.z = isProto ? 2.4 : 65.0;
+        animal.z = isProto ? 2.4 : 52.0;
         currentState = STATE.DANGER;
         currentSpeedKmh = targetCruiseKmh * 0.75;
         carSpeedMs = currentSpeedKmh / 3.6;
@@ -678,7 +678,8 @@
         updateScoreboardUI();
       } else if (isWithinRange && isThreat) {
         // Inside detection range and on collision trajectory
-        if (animal.z < totalStoppingDist * 1.15 || animal.z < activeRange * 0.45) {
+        const dangerThreshold = isProto ? (totalStoppingDist * 1.15) : 55.0;
+        if (animal.z <= dangerThreshold) {
           currentState = STATE.DANGER;
           if (!alertTriggerTime) alertTriggerTime = performance.now();
           playAlertSound(isProto ? 'danger' : 'planned_chime');
@@ -697,7 +698,9 @@
     // Braking Logic (Auto mode)
     if (activeDemoState === 'auto') {
       if (currentMode === MODE.PLANNED) {
-        if ((currentState === STATE.DANGER || currentState === STATE.CAUTION) && !carDecelerating) {
+        // Planned Mode: CAUTION is Forward Collision Warning (FCW) — car cruises forward while monitoring.
+        // DANGER is Autonomous Emergency Braking (AEB) — hard hydraulic braking engages at <= 55m!
+        if (currentState === STATE.DANGER && !carDecelerating) {
           carDecelerating = true;
         }
       } else {
@@ -1192,7 +1195,7 @@
     // Perspective Road Trapezoid
     const roadTopWidth = 14;
     const roadBottomWidth = width * 0.94;
-    const roadBottomY = height * 0.88;
+    const roadBottomY = height * 0.72;
 
     ctx.save();
     ctx.beginPath();
@@ -1273,9 +1276,9 @@
     const dist = Math.max(0.4, animal.z);
 
     // Perspective depth calculation normalized to mode range
-    const normDist = isProto ? (dist / 8.5) : (dist / 275.0);
-    const depthT = Math.max(0.04, Math.min(1.0, 1.0 - normDist));
-    const scale = Math.pow(depthT, 1.4);
+    const normDist = isProto ? (dist / 7.5) : Math.pow(dist / 250.0, 0.65);
+    const depthT = Math.max(0.05, Math.min(0.96, 1.0 - normDist));
+    const scale = Math.pow(depthT, 1.3);
 
     const groundY = horizonY + (roadBottomY - horizonY) * scale;
     const lateralSpanAtGround = roadBottomWidth * scale;
@@ -1288,8 +1291,8 @@
       animalH = Math.max(18, 155 * scale);
       animalW = animalH * 0.55;
     } else if (animal.type === 'dog') {
-      animalH = Math.max(12, 90 * scale);
-      animalW = animalH * 1.45;
+      animalH = Math.max(16, 95 * scale);
+      animalW = animalH * 1.30;
     } else if (animal.type === 'debris') {
       animalH = Math.max(14, 85 * scale);
       animalW = animalH * 1.25;
@@ -1450,76 +1453,97 @@
       ctx.fillRect(animalScreenX + (isFacingRight ? 0 : -animalW * 0.25), drawY + animalH * 0.12, animalW * 0.25, animalH * 0.03);
 
     } else if (animal.type === 'dog') {
-      // Photorealistic Indian Indie Street Dog (Agile canine anatomy)
+      // Photorealistic Indian Indie Street Dog (Desi Dog / Pariah)
       const dogGrad = ctx.createLinearGradient(drawX, drawY, drawX, drawY + animalH);
-      dogGrad.addColorStop(0, '#ca8a04');
-      dogGrad.addColorStop(0.6, '#a16207');
-      dogGrad.addColorStop(1, '#713f12');
+      dogGrad.addColorStop(0, '#d97706');
+      dogGrad.addColorStop(0.5, '#b45309');
+      dogGrad.addColorStop(1, '#78350f');
 
-      // Dog Torso with deep athletic chest and tucked flank
+      const dir = isFacingRight ? 1 : -1;
+      const centerX = drawX + animalW / 2;
+
+      // Deep athletic chest and torso
       ctx.fillStyle = dogGrad;
       ctx.beginPath();
-      ctx.ellipse(drawX + animalW * 0.48, drawY + animalH * 0.48, animalW * 0.35, animalH * 0.22, isFacingRight ? -0.1 : 0.1, 0, Math.PI * 2);
+      ctx.ellipse(centerX, drawY + animalH * 0.48, animalW * 0.32, animalH * 0.22, dir * -0.08, 0, Math.PI * 2);
       ctx.fill();
 
-      // Lighter chest patch
-      ctx.fillStyle = '#fef08a';
+      // Subtle blended warm chest highlight
+      const chestGrad = ctx.createRadialGradient(
+        centerX + dir * (animalW * 0.18), drawY + animalH * 0.50, 2,
+        centerX + dir * (animalW * 0.18), drawY + animalH * 0.50, animalW * 0.2
+      );
+      chestGrad.addColorStop(0, 'rgba(254, 243, 199, 0.65)');
+      chestGrad.addColorStop(0.6, 'rgba(217, 119, 6, 0.2)');
+      chestGrad.addColorStop(1, 'rgba(180, 83, 9, 0)');
+      ctx.fillStyle = chestGrad;
       ctx.beginPath();
-      ctx.ellipse(drawX + (isFacingRight ? animalW * 0.62 : animalW * 0.34), drawY + animalH * 0.52, animalW * 0.12, animalH * 0.14, 0, 0, Math.PI * 2);
+      ctx.ellipse(centerX + dir * (animalW * 0.18), drawY + animalH * 0.50, animalW * 0.15, animalH * 0.16, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 4 Articulated legs with jointed paws
-      ctx.fillStyle = '#854d0e';
-      ctx.fillRect(drawX + animalW * 0.22 + legPhase, drawY + animalH * 0.65, animalW * 0.08, animalH * 0.35);
-      ctx.fillRect(drawX + animalW * 0.36 - legPhase, drawY + animalH * 0.65, animalW * 0.08, animalH * 0.35);
-      ctx.fillRect(drawX + animalW * 0.58 + legPhase, drawY + animalH * 0.65, animalW * 0.08, animalH * 0.35);
-      ctx.fillRect(drawX + animalW * 0.72 - legPhase, drawY + animalH * 0.65, animalW * 0.08, animalH * 0.35);
+      // 4 Athletic Legs with Hocks & Paws
+      ctx.fillStyle = '#92400e';
+      const foreLegX = centerX + dir * (animalW * 0.18);
+      const hindLegX = centerX - dir * (animalW * 0.18);
 
-      // Paws
-      ctx.fillStyle = '#fef08a';
-      ctx.fillRect(drawX + animalW * 0.22 + legPhase, drawY + animalH * 0.95, animalW * 0.11, animalH * 0.05);
-      ctx.fillRect(drawX + animalW * 0.36 - legPhase, drawY + animalH * 0.95, animalW * 0.11, animalH * 0.05);
-      ctx.fillRect(drawX + animalW * 0.58 + legPhase, drawY + animalH * 0.95, animalW * 0.11, animalH * 0.05);
-      ctx.fillRect(drawX + animalW * 0.72 - legPhase, drawY + animalH * 0.95, animalW * 0.11, animalH * 0.05);
+      // Forelegs
+      ctx.fillRect(foreLegX - 3 + legPhase, drawY + animalH * 0.62, Math.max(3, animalW * 0.07), animalH * 0.35);
+      ctx.fillRect(foreLegX + 4 - legPhase, drawY + animalH * 0.62, Math.max(3, animalW * 0.07), animalH * 0.35);
+      // Hindlegs
+      ctx.fillRect(hindLegX - 3 - legPhase, drawY + animalH * 0.62, Math.max(3, animalW * 0.07), animalH * 0.35);
+      ctx.fillRect(hindLegX + 4 + legPhase, drawY + animalH * 0.62, Math.max(3, animalW * 0.07), animalH * 0.35);
 
-      // Canine Neck and Triangular Head
-      const headX = isFacingRight ? drawX + animalW * 0.76 : drawX + animalW * 0.08;
+      // Dark Paws
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(foreLegX - 4 + legPhase, drawY + animalH * 0.94, Math.max(4, animalW * 0.09), animalH * 0.06);
+      ctx.fillRect(foreLegX + 3 - legPhase, drawY + animalH * 0.94, Math.max(4, animalW * 0.09), animalH * 0.06);
+      ctx.fillRect(hindLegX - 4 - legPhase, drawY + animalH * 0.94, Math.max(4, animalW * 0.09), animalH * 0.06);
+      ctx.fillRect(hindLegX + 3 + legPhase, drawY + animalH * 0.94, Math.max(4, animalW * 0.09), animalH * 0.06);
+
+      // Neck and Tapered Head
+      const headCenterX = centerX + dir * (animalW * 0.32);
+      const headCenterY = drawY + animalH * 0.32;
+
       ctx.fillStyle = dogGrad;
       ctx.beginPath();
-      ctx.ellipse(headX + animalW * 0.1, drawY + animalH * 0.35, animalW * 0.16, animalH * 0.16, isFacingRight ? 0.3 : -0.3, 0, Math.PI * 2);
+      ctx.ellipse(headCenterX, headCenterY, animalW * 0.15, animalH * 0.16, dir * 0.25, 0, Math.PI * 2);
       ctx.fill();
 
-      // Snout & Wet Black Nose
-      const snoutX = isFacingRight ? headX + animalW * 0.2 : headX - animalW * 0.05;
-      ctx.fillStyle = '#854d0e';
+      // Pointed Muzzle & Nose
+      const muzzleX = headCenterX + dir * (animalW * 0.12);
+      ctx.fillStyle = '#92400e';
       ctx.beginPath();
-      ctx.ellipse(snoutX, drawY + animalH * 0.38, animalW * 0.08, animalH * 0.08, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#0f172a'; // Nose tip
-      ctx.beginPath();
-      ctx.arc(isFacingRight ? snoutX + animalW * 0.06 : snoutX - animalW * 0.06, drawY + animalH * 0.38, Math.max(1.5, 2.5 * scale), 0, Math.PI * 2);
+      ctx.ellipse(muzzleX, headCenterY + animalH * 0.04, animalW * 0.09, animalH * 0.08, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Pointed Alert Ears
-      ctx.fillStyle = '#713f12';
+      // Black Nose Tip
+      ctx.fillStyle = '#0f172a';
       ctx.beginPath();
-      ctx.moveTo(headX + animalW * 0.05, drawY + animalH * 0.25);
-      ctx.lineTo(headX + animalW * 0.08, drawY + animalH * 0.12);
-      ctx.lineTo(headX + animalW * 0.14, drawY + animalH * 0.25);
+      ctx.arc(muzzleX + dir * (animalW * 0.05), headCenterY + animalH * 0.03, Math.max(1.8, 2.8 * scale), 0, Math.PI * 2);
+      ctx.fill();
+
+      // Alert Perked Ears (Pointed Indian Pariah ears)
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.moveTo(headCenterX - dir * 2, headCenterY - animalH * 0.10);
+      ctx.lineTo(headCenterX + dir * 3, headCenterY - animalH * 0.25);
+      ctx.lineTo(headCenterX + dir * 8, headCenterY - animalH * 0.08);
       ctx.closePath();
       ctx.fill();
 
-      // Expressive Sickle Tail (curved and wagging)
-      const tailRootX = isFacingRight ? drawX + animalW * 0.15 : drawX + animalW * 0.82;
-      ctx.strokeStyle = '#ca8a04';
+      // Expressive Sickle Tail (curved up over the back)
+      const tailBaseX = centerX - dir * (animalW * 0.28);
+      const tailBaseY = drawY + animalH * 0.42;
+      ctx.strokeStyle = '#d97706';
       ctx.lineWidth = Math.max(1.5, 3 * scale);
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(tailRootX, drawY + animalH * 0.45);
+      ctx.moveTo(tailBaseX, tailBaseY);
       ctx.quadraticCurveTo(
-        tailRootX + (isFacingRight ? -animalW * 0.12 : animalW * 0.12),
-        drawY + animalH * 0.18 + Math.sin(animal.walkCycle * 2) * 4,
-        tailRootX + (isFacingRight ? -animalW * 0.04 : animalW * 0.04),
-        drawY + animalH * 0.12
+        tailBaseX - dir * (animalW * 0.16),
+        tailBaseY - animalH * 0.35 + Math.sin(animal.walkCycle * 2) * 3,
+        tailBaseX - dir * (animalW * 0.06),
+        tailBaseY - animalH * 0.40
       );
       ctx.stroke();
 
@@ -1684,15 +1708,28 @@
   function drawWindshieldHUD(ctx, width, horizonY, isProto) {
     ctx.save();
 
-    // Top-Right HUD telemetry banner (clear of top-left pane header badge)
-    ctx.fillStyle = 'rgba(6, 182, 212, 0.9)';
-    ctx.font = 'bold 11px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('ADAS+ PILOT • ACTIVE', width - 16, 22);
+    // Top-Right HUD telemetry pill badge with dark glass background
+    const badgeW = 168;
+    const badgeH = 34;
+    const badgeX = width - badgeW - 14;
+    const badgeY = 12;
 
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
-    ctx.font = '9.5px monospace';
-    ctx.fillText(isProto ? 'PROTOTYPE (0.2–6.0 m)' : 'RADAR TARGET (0.2–250 m)', width - 16, 36);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('ADAS+ PILOT • ACTIVE', width - 22, badgeY + 14);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '9px monospace';
+    ctx.fillText(isProto ? 'PROTOTYPE (0.2–6.0 m)' : 'RADAR TARGET (0.2–250 m)', width - 22, badgeY + 27);
 
     // Dynamic HUD Banner Alert in Center Top (floating glass pill, lowered to avoid pane header)
     let alertText = null;
