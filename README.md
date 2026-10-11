@@ -10,6 +10,12 @@
 
 ---
 
+## 🌐 Live Demo
+
+Interactive explainer: see how ADAS+ works inside a car: [https://dvsh03.github.io/ADAS-Plus/](https://dvsh03.github.io/ADAS-Plus/)
+
+---
+
 ## 📌 Features
 
 - **Real-Time Obstacle Detection**: Powered by YOLOv3-Tiny / Ultralytics YOLO for low-latency vehicle and pedestrian detection on edge hardware.
