@@ -1,6 +1,7 @@
-import os
-
-dogs_path = r"Dataset\Dog"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
+candidate_dogs = os.path.join(PROJECT_ROOT, "Dataset", "Dog")
+dogs_path = candidate_dogs if os.path.exists(candidate_dogs) else os.path.join("Dataset", "Dog")
 
 for split in ["train", "valid"]:  # अगर valid है तो चलेगा, नहीं है तो skip कर देगा
     labels_path = os.path.join(dogs_path, split, "labels")

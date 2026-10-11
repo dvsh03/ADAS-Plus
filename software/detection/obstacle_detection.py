@@ -10,6 +10,7 @@ import sys
 import time
 import signal
 import threading
+import argparse
 
 import cv2
 import numpy as np
@@ -27,35 +28,46 @@ except Exception:
     GPIO = None
 
 
-# --- Configuration & Paths ---
+# --- Configuration & Multi-Path Resolution ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
 YOLO_DIR = os.path.join(BASE_DIR, "yolov3tiny")
 
 
-def get_yolo_path(filename):
-    """Check yolov3tiny subfolder first, then fall back to script root."""
-    subfolder_path = os.path.join(YOLO_DIR, filename)
-    if os.path.isfile(subfolder_path):
-        return subfolder_path
-    return os.path.join(BASE_DIR, filename)
+def find_file(filename, search_dirs=None):
+    """Search for model or config files in subfolders, script directory, and repository root."""
+    if search_dirs is None:
+        search_dirs = [
+            YOLO_DIR,
+            BASE_DIR,
+            PROJECT_ROOT,
+            os.path.join(PROJECT_ROOT, "runs", "ADAS_plus_model", "weights"),
+            os.path.join(BASE_DIR, "runs", "ADAS_plus_yolov3_tiny", "weights"),
+        ]
+    for d in search_dirs:
+        p = os.path.join(d, filename)
+        if os.path.isfile(p):
+            return p
+    return None
 
 
-# ESP32-CAM stream configuration
-ESP32_IP = "10.12.202.214"
+# Camera & Video Stream Configuration
+ESP32_IP = os.getenv("ESP32_IP", "10.12.202.214")
 ESP32_STREAM_URL = f"http://{ESP32_IP}:81/stream"
+VIDEO_SOURCE = os.getenv("VIDEO_SOURCE", "stream")  # 'stream', 'webcam'/'0', or video path
 
 CAMERA_WIDTH = 320
 CAMERA_HEIGHT = 240
 JPEG_QUALITY = 65
 
-# Model paths
-YOLO_CONFIG = get_yolo_path("yolov3-tiny.cfg")
-YOLO_WEIGHTS = get_yolo_path("yolov3-tiny.weights")
-YOLO_NAMES = get_yolo_path("coco.names")
+# Model paths (auto-resolves from YOLO_DIR, software/detection, or repo root)
+YOLO_CONFIG = find_file("yolov3-tiny.cfg") or os.path.join(YOLO_DIR, "yolov3-tiny.cfg")
+YOLO_WEIGHTS = find_file("yolov3-tiny.weights") or os.path.join(YOLO_DIR, "yolov3-tiny.weights")
+YOLO_NAMES = find_file("coco.names") or os.path.join(YOLO_DIR, "coco.names")
 
-CUSTOM_YOLO_PT = os.path.join(BASE_DIR, "runs", "ADAS_plus_yolov3_tiny", "weights", "best.pt")
-CUSTOM_YOLO_ONNX = os.path.join(BASE_DIR, "runs", "ADAS_plus_yolov3_tiny", "weights", "best.onnx")
-PRETRAINED_YOLO_PT = os.path.join(BASE_DIR, "yolov3-tinyu.pt")
+CUSTOM_YOLO_PT = find_file("best.pt")
+CUSTOM_YOLO_ONNX = find_file("best.onnx")
+PRETRAINED_YOLO_PT = find_file("yolov3-tinyu.pt") or find_file("yolo26n.pt")
 
 YOLO_SIZE = 192
 CONFIDENCE_THRESHOLD = 0.28
@@ -147,10 +159,10 @@ def init_yolo_detector():
 
     # 1. Try PyTorch model via Ultralytics (custom best.pt or yolov3-tinyu.pt)
     candidate_pt = None
-    if os.path.isfile(CUSTOM_YOLO_PT):
+    if CUSTOM_YOLO_PT and os.path.isfile(CUSTOM_YOLO_PT):
         candidate_pt = CUSTOM_YOLO_PT
         print(f"[YOLO] Custom trained model found: '{CUSTOM_YOLO_PT}'")
-    elif os.path.isfile(PRETRAINED_YOLO_PT):
+    elif PRETRAINED_YOLO_PT and os.path.isfile(PRETRAINED_YOLO_PT):
         candidate_pt = PRETRAINED_YOLO_PT
         print(f"[YOLO] Pretrained PyTorch model found: '{PRETRAINED_YOLO_PT}'")
 
@@ -166,7 +178,7 @@ def init_yolo_detector():
             print(f"[YOLO] Ultralytics load error: {e}. Falling back to Darknet...")
 
     # 2. Try ONNX model via OpenCV DNN
-    if os.path.isfile(CUSTOM_YOLO_ONNX):
+    if CUSTOM_YOLO_ONNX and os.path.isfile(CUSTOM_YOLO_ONNX):
         try:
             net = cv2.dnn.readNetFromONNX(CUSTOM_YOLO_ONNX)
             net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
@@ -180,7 +192,9 @@ def init_yolo_detector():
 
     # 3. Fallback to Darknet YOLOv3-Tiny
     print(f"[YOLO] Loading Darknet model from '{YOLO_DIR}'...")
-    if not os.path.isfile(YOLO_CONFIG) or not os.path.isfile(YOLO_WEIGHTS) or not os.path.isfile(YOLO_NAMES):
+    if not (YOLO_CONFIG and os.path.isfile(YOLO_CONFIG)) or \
+       not (YOLO_WEIGHTS and os.path.isfile(YOLO_WEIGHTS)) or \
+       not (YOLO_NAMES and os.path.isfile(YOLO_NAMES)):
         print("[YOLO] ERROR: Missing Darknet model files.")
         net = None
         return
@@ -275,10 +289,61 @@ def stable_distance():
     return float(np.median(distance_history))
 
 
-# --- Camera MJPEG Thread ---
+# --- Camera Capture Thread (ESP32-CAM MJPEG Stream or Local Webcam) ---
 def camera_thread():
     global latest_jpeg, latest_jpeg_time, latest_frame, latest_frame_time, camera_fps
 
+    # Branch 1: Local webcam or video file input
+    if VIDEO_SOURCE != "stream":
+        is_webcam = VIDEO_SOURCE in ("0", "webcam")
+        source_target = 0 if is_webcam else VIDEO_SOURCE
+        print(f"[CAMERA] Opening local video source: {source_target} ...")
+        cap = cv2.VideoCapture(source_target)
+        if not cap.isOpened():
+            print(f"[CAMERA] ERROR: Could not open video source '{source_target}'.")
+            return
+
+        print(f"[CAMERA] Local video source active.")
+        frame_counter = 0
+        fps_start = time.monotonic()
+
+        while running:
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                if not is_webcam:
+                    # Loop video file if reaching end
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    time.sleep(0.05)
+                    continue
+                time.sleep(0.05)
+                continue
+
+            if frame.shape[1] != CAMERA_WIDTH or frame.shape[0] != CAMERA_HEIGHT:
+                frame = cv2.resize(frame, (CAMERA_WIDTH, CAMERA_HEIGHT), interpolation=cv2.INTER_LINEAR)
+
+            ret_enc, jpeg = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), JPEG_QUALITY])
+            if ret_enc:
+                with jpeg_lock:
+                    latest_jpeg = jpeg.tobytes()
+                    latest_jpeg_time = time.time()
+
+            frame_counter += 1
+            now = time.monotonic()
+            if now - fps_start >= 1.0:
+                camera_fps = frame_counter / (now - fps_start)
+                frame_counter = 0
+                fps_start = now
+
+            with frame_lock:
+                latest_frame_time = time.time()
+
+            time.sleep(0.03)  # Rate-limit local loop to ~30 FPS
+
+        cap.release()
+        print("[CAMERA] Local video source released.")
+        return
+
+    # Branch 2: ESP32-CAM wireless MJPEG HTTP stream
     print(f"[CAMERA] Connecting to stream at {ESP32_STREAM_URL} ...")
 
     while running:
@@ -827,7 +892,31 @@ signal.signal(signal.SIGTERM, shutdown)
 
 
 def main():
-    print("\n--- ADAS+ OBSTACLE SYSTEM ---\n")
+    global ESP32_IP, ESP32_STREAM_URL, VIDEO_SOURCE, CONFIDENCE_THRESHOLD, GPIO_AVAILABLE
+
+    parser = argparse.ArgumentParser(description="ADAS+ Obstacle Detection & Multi-Sensor System")
+    parser.add_argument("--ip", type=str, default=ESP32_IP, help=f"ESP32-CAM IP address (default: {ESP32_IP})")
+    parser.add_argument("--source", type=str, default=VIDEO_SOURCE, help="Video source: 'stream' (ESP32-CAM), 'webcam' or '0', or video file path")
+    parser.add_argument("--conf", type=float, default=CONFIDENCE_THRESHOLD, help=f"YOLO confidence threshold (default: {CONFIDENCE_THRESHOLD})")
+    parser.add_argument("--port", type=int, default=5000, help="Web dashboard server port (default: 5000)")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Web dashboard host (default: 0.0.0.0)")
+    parser.add_argument("--no-gpio", action="store_true", help="Force disable hardware GPIO (simulation mode)")
+    args = parser.parse_args()
+
+    ESP32_IP = args.ip
+    ESP32_STREAM_URL = f"http://{ESP32_IP}:81/stream"
+    VIDEO_SOURCE = args.source
+    CONFIDENCE_THRESHOLD = args.conf
+
+    if args.no_gpio and GPIO_AVAILABLE:
+        GPIO_AVAILABLE = False
+        print("[GPIO] Hardware GPIO disabled via --no-gpio flag.")
+
+    print("\n--- ADAS+ OBSTACLE DETECTION SYSTEM ---")
+    print(f"Video Source : {VIDEO_SOURCE} (Stream URL: {ESP32_STREAM_URL} if stream)")
+    print(f"Model Backend: {model_backend}")
+    print(f"Confidence   : {CONFIDENCE_THRESHOLD}")
+    print(f"GPIO Active  : {GPIO_AVAILABLE}\n")
 
     camera = threading.Thread(target=camera_thread, daemon=True)
     detection = threading.Thread(target=detection_thread, daemon=True)
@@ -835,17 +924,17 @@ def main():
     buzzer = threading.Thread(target=buzzer_thread, daemon=True)
     ir = threading.Thread(target=ir_thread, daemon=True)
 
-    print("[SYSTEM] Starting threads...")
+    print("[SYSTEM] Starting worker threads...")
     camera.start()
     detection.start()
     sensors.start()
     buzzer.start()
     ir.start()
 
-    print("\n[WEB] Web server listening on http://0.0.0.0:5000\n")
-
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True, use_reloader=False)
+    print(f"\n[WEB] Web server listening on http://{args.host}:{args.port}\n")
+    app.run(host=args.host, port=args.port, debug=False, threaded=True, use_reloader=False)
 
 
 if __name__ == "__main__":
     main()
+

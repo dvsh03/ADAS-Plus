@@ -18,17 +18,22 @@ def main():
         print(f"[INFO] CUDA available. Using GPU: {gpu_name}")
     else:
         device = "cpu"
-        print("[WARN] CUDA not available. Training will run on CPU.")
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
 
-    model_path = os.path.join(BASE_DIR, "yolov3-tinyu.pt")
-    if not os.path.isfile(model_path):
-        print(f"[INFO] Pretrained weights not found locally at {model_path}. Ultralytics will download default weights.")
+    model_candidate = os.path.join(PROJECT_ROOT, "yolov3-tinyu.pt")
+    if os.path.isfile(model_candidate):
+        model_path = model_candidate
+    elif os.path.isfile(os.path.join(BASE_DIR, "yolov3-tinyu.pt")):
+        model_path = os.path.join(BASE_DIR, "yolov3-tinyu.pt")
+    else:
+        print(f"[INFO] Pretrained weights not found locally. Ultralytics will download default weights.")
         model_path = "yolov3-tinyu.pt"
 
     print(f"[INFO] Loading model weights: {model_path}")
     model = YOLO(model_path)
 
-    data_config = os.path.join(BASE_DIR, "data.yaml")
+    data_candidate = os.path.join(PROJECT_ROOT, "data.yaml")
+    data_config = data_candidate if os.path.isfile(data_candidate) else os.path.join(BASE_DIR, "data.yaml")
     print(f"[INFO] Starting model training using dataset config: {data_config}")
 
     model.train(

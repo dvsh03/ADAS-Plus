@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-RUNS_DIR = os.path.join(BASE_DIR, "runs", "ADAS_plus_model")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
+RUNS_DIR = os.path.join(PROJECT_ROOT, "runs", "ADAS_plus_model")
 os.makedirs(RUNS_DIR, exist_ok=True)
 
 EPOCHS = 50
