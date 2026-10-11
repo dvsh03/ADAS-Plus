@@ -81,8 +81,9 @@
   let currentState = STATE.CLEAR;
 
   // Car State
-  let carSpeedKmh = 10.0; // Default for prototype (low speed)
-  let carSpeedMs = carSpeedKmh / 3.6;
+  let targetSpeedKmh = 10.0; // Cruise speed set by slider or mode
+  let currentSpeedKmh = 10.0; // Real-time instantaneous speed (decelerates to 0 during braking)
+  let carSpeedMs = targetSpeedKmh / 3.6;
   let carDecelerating = false;
   let alertTriggerTime = null;
   let roadScrollOffset = 0;
@@ -147,7 +148,7 @@
         speedSlider.max = '25';
         speedSlider.value = '10';
       }
-      carSpeedKmh = 10.0;
+      targetSpeedKmh = 10.0;
       if (speedSliderVal) speedSliderVal.textContent = '10 km/h';
       if (simRangeCaption) {
         simRangeCaption.textContent = 'Detection range: 0.2-6 m (prototype)';
@@ -158,14 +159,15 @@
         speedSlider.max = '130';
         speedSlider.value = '80';
       }
-      carSpeedKmh = 80.0;
+      targetSpeedKmh = 80.0;
       if (speedSliderVal) speedSliderVal.textContent = '80 km/h';
       if (simRangeCaption) {
         simRangeCaption.textContent = 'Target range: 0.2-250 m (planned, not built)';
       }
     }
 
-    carSpeedMs = carSpeedKmh / 3.6;
+    currentSpeedKmh = targetSpeedKmh;
+    carSpeedMs = currentSpeedKmh / 3.6;
     spawnAnimal();
   }
 
@@ -190,6 +192,7 @@
     animal.walkCycle = 0;
     animal.resolved = false;
     animal.crossingActive = true;
+    outcomeTimer = 0;
 
     const isProto = currentMode === MODE.PROTOTYPE;
     const activeRange = isProto ? PROTOTYPE_RANGE_M : PLANNED_RANGE_M;
@@ -198,7 +201,7 @@
     if (isProto) {
       animal.z = 5.2 + Math.random() * 1.6; // Starts around 5.5 to 6.8 m
     } else {
-      animal.z = 210.0 + Math.random() * 40.0; // Starts around 210 to 250 m
+      animal.z = 180.0 + Math.random() * 50.0; // Starts around 180 to 230 m
     }
 
     if (side === 'left') {
@@ -212,8 +215,11 @@
       animal.vx = (Math.random() - 0.5) * 0.25;
     }
 
-    // Reset vehicle dynamics to current slider speed
-    carSpeedMs = carSpeedKmh / 3.6;
+    // Always restore cruising speed from the UI slider setting
+    const sliderVal = speedSlider ? parseFloat(speedSlider.value) : (isProto ? 10.0 : 80.0);
+    targetSpeedKmh = Math.max(5.0, sliderVal);
+    currentSpeedKmh = targetSpeedKmh;
+    carSpeedMs = currentSpeedKmh / 3.6;
     carDecelerating = false;
     alertTriggerTime = null;
     currentState = STATE.CLEAR;
@@ -278,8 +284,11 @@
           setOutcome('PASSED', 'Animal crossed road safely outside vehicle corridor.');
         }
         updateScoreboardUI();
-      } else if (carSpeedMs <= 0.15) {
-        // Vehicle stopped safely before animal
+      } else if (carDecelerating && carSpeedMs <= 0.15) {
+        // Vehicle stopped safely before animal in response to alert
+        carSpeedMs = 0;
+        currentSpeedKmh = 0;
+        carDecelerating = false;
         animal.resolved = true;
         score.safeStops += 1;
         const distMargin = Math.max(0, animal.z).toFixed(1);
@@ -287,6 +296,12 @@
           `Safe human stop: Driver alerted by prototype buzzer and halted ${distMargin} m before animal.` :
           `Safe AEB stop: Automatic emergency braking halted car ${distMargin} m before animal (Planned concept).`;
         setOutcome('SAFE_STOP', msg);
+        updateScoreboardUI();
+      } else if (animal.crossingActive && ((animal.vx > 0 && animal.x > ROAD_WIDTH_METERS / 2 + 1.2) || (animal.vx < 0 && animal.x < -ROAD_WIDTH_METERS / 2 - 1.2))) {
+        // Animal walked completely clear of roadway
+        animal.resolved = true;
+        score.cleared += 1;
+        setOutcome('PASSED', 'Animal crossed road safely outside vehicle corridor.');
         updateScoreboardUI();
       } else if (isWithinRange && isThreat) {
         // Inside detection range and on collision course
@@ -324,13 +339,13 @@
     // Apply deceleration
     if (carDecelerating) {
       carSpeedMs = Math.max(0, carSpeedMs - brakeDecel * dt);
-      carSpeedKmh = carSpeedMs * 3.6;
+      currentSpeedKmh = carSpeedMs * 3.6;
     }
 
     // Outcome cycle delay
     if (animal.resolved) {
       outcomeTimer += dt;
-      if (outcomeTimer >= 2.6) {
+      if (outcomeTimer >= 2.2) {
         outcomeTimer = 0;
         spawnAnimal();
       }
@@ -394,7 +409,7 @@
     }
 
     if (hudSpeedVal) {
-      hudSpeedVal.textContent = `${Math.round(carSpeedKmh)} km/h`;
+      hudSpeedVal.textContent = `${Math.round(currentSpeedKmh)} km/h`;
     }
 
     if (hudStoppingVal) {
@@ -839,7 +854,7 @@
     ctx.fillText('SPEED', clusterX + 12, clusterY + 18);
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 16px monospace';
-    ctx.fillText(`${Math.round(carSpeedKmh)} km/h`, clusterX + 12, clusterY + 38);
+    ctx.fillText(`${Math.round(currentSpeedKmh)} km/h`, clusterX + 12, clusterY + 38);
 
     // ADAS+ Zone
     ctx.fillStyle = '#94a3b8';
@@ -889,9 +904,12 @@
 
   if (speedSlider) {
     speedSlider.addEventListener('input', (e) => {
-      carSpeedKmh = parseFloat(e.target.value);
-      carSpeedMs = carSpeedKmh / 3.6;
-      if (speedSliderVal) speedSliderVal.textContent = `${Math.round(carSpeedKmh)} km/h`;
+      targetSpeedKmh = parseFloat(e.target.value);
+      currentSpeedKmh = targetSpeedKmh;
+      carSpeedMs = currentSpeedKmh / 3.6;
+      carDecelerating = false;
+      alertTriggerTime = null;
+      if (speedSliderVal) speedSliderVal.textContent = `${Math.round(targetSpeedKmh)} km/h`;
       resetScoreboard();
     });
   }
