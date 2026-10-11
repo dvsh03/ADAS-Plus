@@ -145,21 +145,31 @@
         <div class="sim-controls-bar">
           <div class="mode-toggle-group" role="group" aria-label="Simulation Mode Selector">
             <button id="btnModePrototype" class="mode-btn mode-prototype active" aria-pressed="true">
-              <span aria-hidden="true">🔔</span>
-              <span>Prototype: Warns Driver</span>
+              <span class="mode-btn-icon" aria-hidden="true">🔔</span>
+              <span class="mode-btn-content">
+                <span class="mode-btn-title">Prototype (0.2–6 m)</span>
+                <span class="mode-btn-sub">Tested Short-Range • Warns Driver</span>
+              </span>
             </button>
             <button id="btnModePlanned" class="mode-btn mode-planned" aria-pressed="false">
-              <span aria-hidden="true">🛑</span>
-              <span>Planned: Auto-Brake (Concept)</span>
+              <span class="mode-btn-icon" aria-hidden="true">🛑</span>
+              <span class="mode-btn-content">
+                <span class="mode-btn-title">Planned (0.2–250 m)</span>
+                <span class="mode-btn-sub">Highway Radar Target • Auto-Braking</span>
+              </span>
             </button>
           </div>
 
-          <div class="sim-speed-control">
-            <label for="speedSlider" class="speed-label">Speed: <strong id="speedSliderVal">10 km/h</strong></label>
-            <input type="range" id="speedSlider" min="5" max="25" step="1" value="10" class="speed-slider" aria-label="Vehicle speed control">
+          <div class="sim-auto-speed-pill" aria-label="Automated cruising speed telemetry">
+            <span class="speed-pill-label">Adaptive Cruise:</span>
+            <strong id="autoSpeedVal" class="speed-pill-val">12 km/h</strong>
+            <span id="speedModeContext" class="speed-pill-tag">(Low-Speed Test)</span>
           </div>
 
           <div class="sim-toggles">
+            <button id="btnToggleSound" class="control-btn" aria-label="Toggle Warning Buzzer Sound">
+              <span id="soundIcon">🔊 Sound ON</span>
+            </button>
             <button id="btnToggleNight" class="control-btn" aria-label="Toggle Night Mode with Infrared Illumination">
               <span>🌙 Night + IR</span>
             </button>
@@ -749,6 +759,6 @@
 
   <!-- Scripts -->
   <script src="js/main.js"></script>
-  <script src="js/simulation.js?v=2.2"></script>
+  <script src="js/simulation.js?v=3.0"></script>
 </body>
 </html>
