@@ -9,7 +9,15 @@ import numpy as np
 from ultralytics import YOLO
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "yolov3-tinyu.pt")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
+
+candidate_paths = [
+    os.path.join(PROJECT_ROOT, "yolov3-tinyu.pt"),
+    os.path.join(BASE_DIR, "yolov3-tinyu.pt"),
+    os.path.join(PROJECT_ROOT, "yolo26n.pt"),
+    os.path.join(BASE_DIR, "yolo26n.pt"),
+]
+MODEL_PATH = next((p for p in candidate_paths if os.path.isfile(p)), candidate_paths[0])
 
 
 def main():

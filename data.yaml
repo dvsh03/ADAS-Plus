@@ -1,4 +1,4 @@
-path: d:/ADAS+/Dataset
+path: ./Dataset
 
 train: train/images
 val: valid/images
