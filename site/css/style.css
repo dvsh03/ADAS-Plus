@@ -624,6 +624,237 @@ button {
   border-color: var(--accent-blue);
 }
 
+/* Sim Hazard Scenario Bar */
+.sim-scenario-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.scenario-bar-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.775rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.scenario-badge {
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.675rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.scenario-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.scenario-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.85rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.scenario-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-highlight);
+  transform: translateY(-1px);
+}
+
+.scenario-btn.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+}
+
+.scenario-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.scenario-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.scenario-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.scenario-desc {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  line-height: 1.15;
+}
+
+/* Motion Toggle Group (Moving vs Steady) */
+.motion-toggle-group {
+  display: flex;
+  background: var(--bg-secondary);
+  padding: 0.2rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  gap: 0.25rem;
+}
+
+.motion-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.775rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.motion-btn:hover {
+  color: var(--text-primary);
+}
+
+.motion-btn.active {
+  background: var(--bg-tertiary);
+  color: var(--accent-cyan);
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
+}
+
+/* Alert State Demo Bar (Caution, Danger, Safe Stop) */
+.sim-state-demo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1.5rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.state-demo-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.state-demo-badge {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.state-demo-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.state-demo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.state-demo-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-highlight);
+}
+
+.state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-cyan { background: var(--accent-cyan); box-shadow: 0 0 6px var(--accent-cyan); }
+.dot-caution { background: var(--accent-amber); box-shadow: 0 0 6px var(--accent-amber); }
+.dot-danger { background: var(--accent-rose); box-shadow: 0 0 6px var(--accent-rose); }
+.dot-safestop { background: var(--accent-emerald); box-shadow: 0 0 6px var(--accent-emerald); }
+
+.state-demo-btn.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+.state-demo-btn.btn-caution.active {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+.state-demo-btn.btn-danger.active {
+  color: var(--accent-rose);
+  border-color: var(--accent-rose);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
+.state-demo-btn.btn-safestop.active {
+  color: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
 /* Sim Arena Grid (Dual Viewport) */
 .sim-arena-grid {
   display: grid;
@@ -646,21 +877,23 @@ button {
 
 .pane-header {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
+  top: 0.85rem;
+  left: 0.85rem;
   z-index: 10;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.88);
   backdrop-filter: blur(8px);
-  padding: 0.35rem 0.75rem;
+  padding: 0.35rem 0.7rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(148, 163, 184, 0.25);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  color: #f8fafc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .pane-badge {
@@ -692,6 +925,202 @@ button {
 @keyframes flash-border {
   from { box-shadow: inset 0 0 30px 5px rgba(239, 68, 68, 0.5); }
   to { box-shadow: inset 0 0 80px 15px rgba(239, 68, 68, 0.85); }
+}
+
+/* Interactive Sensor Envelope Range Ruler */
+.sim-envelope-ruler {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ruler-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ruler-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ruler-icon {
+  font-size: 1rem;
+}
+
+.ruler-heading {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ruler-status-badge {
+  font-size: 0.725rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  transition: all var(--transition-fast);
+}
+
+.ruler-status-badge.badge-proto {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.ruler-status-badge.badge-planned {
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+}
+
+.ruler-track-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 1.5rem; /* space for pin marker callout */
+}
+
+.ruler-track {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  overflow: visible;
+}
+
+.ruler-pin {
+  position: absolute;
+  top: -1.35rem;
+  left: 0;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.pin-marker {
+  width: 2px;
+  height: 66px;
+  background: var(--accent-rose);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.85);
+}
+
+.pin-callout {
+  position: absolute;
+  top: -1.25rem;
+  left: 50%;
+  transform: translateX(-15%);
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.pin-dist {
+  font-family: var(--font-mono);
+  font-size: 0.725rem;
+  font-weight: 800;
+  color: var(--accent-rose);
+}
+
+.pin-tag {
+  font-size: 0.625rem;
+  color: var(--text-muted);
+}
+
+.ruler-zone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 0.95rem;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  border-right: 1px dashed var(--border-color);
+  overflow: hidden;
+}
+
+.ruler-zone:last-child {
+  border-right: none;
+}
+
+.zone-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  transition: opacity var(--transition-normal);
+}
+
+.zone-proto .zone-glow {
+  background: linear-gradient(90deg, var(--accent-emerald), transparent);
+}
+
+.zone-planned .zone-glow {
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+}
+
+.ruler-zone.active .zone-glow {
+  opacity: 0.24;
+}
+
+.ruler-zone.active {
+  box-shadow: inset 0 0 16px rgba(59, 130, 246, 0.18);
+}
+
+.ruler-zone.zone-proto.active {
+  border-bottom: 3px solid var(--accent-emerald);
+}
+
+.ruler-zone.zone-planned.active {
+  border-bottom: 3px solid var(--accent-cyan);
+}
+
+.zone-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.zone-name {
+  font-size: 0.775rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.zone-range {
+  font-size: 0.725rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+}
+
+.zone-proto .zone-range {
+  color: var(--accent-emerald);
+}
+
+.zone-tech {
+  font-size: 0.65rem;
+  color: var(--text-muted);
 }
 
 /* Sim Live Telemetry HUD */
@@ -1300,5 +1729,29 @@ button {
   .btn-primary, .btn-secondary {
     width: 100%;
     justify-content: center;
+  }
+  .scenario-btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+  .scenario-btn {
+    padding: 0.4rem 0.6rem;
+  }
+  .sim-scenario-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ruler-track {
+    flex-direction: column;
+    min-height: auto;
+  }
+  .ruler-zone {
+    width: 100% !important;
+    border-right: none;
+    border-bottom: 1px dashed var(--border-color);
+  }
+  .ruler-pin {
+    display: none;
   }
 }

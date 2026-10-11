@@ -182,13 +182,93 @@
           </div>
         </div>
 
+        <!-- Sim Hazard Scenario Selector & Motion Mode -->
+        <div class="sim-scenario-bar">
+          <div class="scenario-bar-label">
+            <span class="scenario-badge">TEST SCENARIO</span>
+            <span>Obstacle:</span>
+          </div>
+          <div class="scenario-btn-group" role="group" aria-label="Obstacle Scenario Presets">
+            <button id="scenarioCow" class="scenario-btn active" data-scenario="cow" aria-pressed="true">
+              <span class="scenario-icon">🐄</span>
+              <span class="scenario-meta">
+                <span class="scenario-title">Stray Cattle</span>
+                <span class="scenario-desc">Realistic Gir Cow</span>
+              </span>
+            </button>
+            <button id="scenarioDog" class="scenario-btn" data-scenario="dog" aria-pressed="false">
+              <span class="scenario-icon">🐕</span>
+              <span class="scenario-meta">
+                <span class="scenario-title">Darting Dog</span>
+                <span class="scenario-desc">Street Indie Canine</span>
+              </span>
+            </button>
+            <button id="scenarioPedestrian" class="scenario-btn" data-scenario="pedestrian" aria-pressed="false">
+              <span class="scenario-icon">🚶</span>
+              <span class="scenario-meta">
+                <span class="scenario-title">Pedestrian</span>
+                <span class="scenario-desc">Reflective Vest</span>
+              </span>
+            </button>
+            <button id="scenarioDebris" class="scenario-btn" data-scenario="debris" aria-pressed="false">
+              <span class="scenario-icon">📦</span>
+              <span class="scenario-meta">
+                <span class="scenario-title">Road Cargo</span>
+                <span class="scenario-desc">Wood Crate Hazard</span>
+              </span>
+            </button>
+            <button id="scenarioSmall" class="scenario-btn" data-scenario="small" aria-pressed="false">
+              <span class="scenario-icon">🥫</span>
+              <span class="scenario-meta">
+                <span class="scenario-title">Small (&lt;15cm)</span>
+                <span class="scenario-desc">Ignored • Roll-Over</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- Motion Mode Toggle (Moving vs Steady) -->
+          <div class="motion-toggle-group" role="group" aria-label="Animal Motion Mode">
+            <button id="btnMotionMoving" class="motion-btn active" aria-pressed="true" title="Animal crosses the road from shoulder into lane">
+              <span>🏃 Moving (Crossing)</span>
+            </button>
+            <button id="btnMotionSteady" class="motion-btn" aria-pressed="false" title="Animal stands stationary in center lane">
+              <span>🛑 Steady (Standing)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Alert State Demo Bar (Caution, Danger, Safe Stop) -->
+        <div class="sim-state-demo-bar">
+          <div class="state-demo-label">
+            <span class="state-demo-badge">ALERT DEMO</span>
+            <span>Test ADAS State:</span>
+          </div>
+          <div class="state-demo-btn-group" role="group" aria-label="Alert State Demo Selectors">
+            <button id="btnDemoAuto" class="state-demo-btn active" data-state="auto">
+              <span class="state-dot dot-cyan"></span>
+              <span>🔄 Auto Perception Cycle</span>
+            </button>
+            <button id="btnDemoCaution" class="state-demo-btn btn-caution" data-state="caution">
+              <span class="state-dot dot-caution"></span>
+              <span>🟡 Caution Demo</span>
+            </button>
+            <button id="btnDemoDanger" class="state-demo-btn btn-danger" data-state="danger">
+              <span class="state-dot dot-danger"></span>
+              <span>🔴 Danger Demo</span>
+            </button>
+            <button id="btnDemoSafeStop" class="state-demo-btn btn-safestop" data-state="safestop">
+              <span class="state-dot dot-safestop"></span>
+              <span>🟢 Safe Stop Demo</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Sim Dual Viewport Grid -->
         <div class="sim-arena-grid">
           <!-- Pane 1: Top-Down Aerial View -->
           <div class="sim-pane">
             <div class="pane-header">
-              <span class="pane-badge">Top View</span>
-              <span>Roadway &amp; Sensor Coverage</span>
+              <span class="pane-badge">📡 Aerial Radar View</span>
             </div>
             <canvas id="topViewCanvas" class="sim-canvas" width="400" height="480" aria-label="Bird's-eye top view of vehicle driving down road with crossing animals"></canvas>
           </div>
@@ -196,11 +276,53 @@
           <!-- Pane 2: Driver Windshield Perspective View -->
           <div class="sim-pane">
             <div class="pane-header">
-              <span class="pane-badge">Driver's View</span>
-              <span>Windshield Perspective &amp; Cluster</span>
+              <span class="pane-badge">🚘 Cockpit Windshield HUD</span>
             </div>
             <div id="windshieldFlash" class="windshield-flash-overlay" aria-hidden="true"></div>
             <canvas id="driverViewCanvas" class="sim-canvas" width="600" height="480" aria-label="Driver windshield perspective view with detected obstacle bounding box and vehicle dashboard speedometer"></canvas>
+          </div>
+        </div>
+
+        <!-- Interactive Sensor Envelope Ruler -->
+        <div class="sim-envelope-ruler" aria-label="Interactive Sensor Envelope Comparison Ruler">
+          <div class="ruler-header">
+            <div class="ruler-title-group">
+              <span class="ruler-icon">📐</span>
+              <span class="ruler-heading">SENSOR DETECTION ENVELOPE</span>
+            </div>
+            <div id="rulerActiveBadge" class="ruler-status-badge badge-proto">
+              Active: Prototype Envelope (0.2–6.0 m)
+            </div>
+          </div>
+          <div class="ruler-track-wrap">
+            <div class="ruler-track">
+              <!-- Bumper Limit 0.2m Pin -->
+              <div class="ruler-pin pin-bumper">
+                <div class="pin-marker"></div>
+                <div class="pin-callout">
+                  <span class="pin-dist">0.2 m</span>
+                  <span class="pin-tag">Bumper Proximity Margin</span>
+                </div>
+              </div>
+              <!-- Prototype Zone (0.2m - 6.0m) -->
+              <div id="rulerZoneProto" class="ruler-zone zone-proto active" style="width: 25%;">
+                <div class="zone-glow"></div>
+                <div class="zone-content">
+                  <span class="zone-name">🔬 Benchtop Prototype</span>
+                  <span class="zone-range">0.2 m – 6.0 m (Tested)</span>
+                  <span class="zone-tech">HC-SR04 Ultrasonic + OV2640 YOLOv3-Tiny</span>
+                </div>
+              </div>
+              <!-- Production Target Zone (0.2m - 250m) -->
+              <div id="rulerZonePlanned" class="ruler-zone zone-planned" style="width: 75%;">
+                <div class="zone-glow"></div>
+                <div class="zone-content">
+                  <span class="zone-name">🎯 Production Target</span>
+                  <span class="zone-range">0.2 m – 250 m (Planned)</span>
+                  <span class="zone-tech">77 GHz Long-Range Automotive Radar + Full AEB</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -658,6 +780,13 @@
             Simulation speeds, distances, stopping times, and warning levels are illustrative engineering models to demonstrate perception and braking concepts, not tested physical limits. The prototype range of about 0.2–6 m is the owner's tested figure; the 200–250 m figure is an unbuilt future design target.
           </p>
         </div>
+
+        <div class="faq-card">
+          <h3 class="faq-q"><span class="faq-q-icon" aria-hidden="true">Q:</span> Does ADAS+ ignore small obstacles that vehicles can easily drive over?</h3>
+          <p class="faq-a">
+            <strong>Yes, absolutely!</strong> Automotive ADAS systems must avoid <em>"phantom braking"</em> (false emergency stops for harmless road debris like crushed cans, leaves, flat stones, or plastic wrappers). ADAS+ achieves this through three filters: (1) <strong>YOLO Class Gating:</strong> only flags hazardous road classes (cattle, dogs, pedestrians, vehicles, large debris); (2) <strong>Height / Ground Clearance Threshold (&gt;15–20 cm):</strong> bounding boxes below vehicle bumper ground clearance are treated as drivable free space; and (3) <strong>Ultrasonic &amp; Radar Mounting Geometry:</strong> sensors are elevated at bumper height (35–45 cm) so small objects produce negligible return reflection (low Radar Cross Section). You can test this live above with the <em>"🥫 Small Item (&lt;15cm)"</em> preset!
+          </p>
+        </div>
       </div>
     </div>
   </section>
@@ -759,6 +888,6 @@
 
   <!-- Scripts -->
   <script src="js/main.js"></script>
-  <script src="js/simulation.js?v=3.0"></script>
+  <script src="js/simulation.js?v=5.0"></script>
 </body>
 </html>
