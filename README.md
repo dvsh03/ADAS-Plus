@@ -33,7 +33,7 @@ Interactive explainer: see how ADAS+ works inside a car: [https://dvsh03.github.
 ADAS-Plus/
 │
 ├── README.md                  # Main project documentation
-├── LICENSE                    # MIT License
+├── LICENSE                    # Restricted Use License (Academic & Non-Commercial)
 ├── .gitignore                 # Git ignore rules for datasets & models
 ├── requirements.txt           # Python dependencies
 ├── data.yaml                  # YOLO dataset configuration

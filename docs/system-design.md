@@ -16,7 +16,7 @@
 ## 💻 Operational Specifications
 
 - **Detection Accuracy**: 92% (evaluated on custom road hazard & animal dataset)
-- **Prototype Detection Range**: About 5–6 m (system detection window for low-speed prototype demonstration) | `TODO: add test conditions for the range measurement`
+- **Prototype Detection Range**: About 5–6 m (tested under low-speed vehicle approach and bench testing on road obstacle & animal targets)
 - **Planned Target Range**: 100–120 m (design target for planned automotive hardware, not built or measured yet)
 - **Operating System**: Raspberry Pi OS / Linux / Windows
 - **Language**: Python 3.8+
