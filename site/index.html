@@ -230,11 +230,11 @@
                 <span>🚗 Vehicle cruising at safe road speed. Monitoring for obstacles...</span>
               </div>
               <div id="simRangeCaption" class="sim-range-caption-box">
-                Detection range: about 6 m (prototype)
+                Detection range: 0.2–6 m (prototype)
               </div>
             </div>
             <div id="simOutcomeNote" class="outcome-mode-note">
-              Prototype Mode (5-6m range): Alerts driver only via buzzer. Human reaction latency (0.8s) governs braking.
+              Prototype Mode (0.2–6m range): Alerts driver only via buzzer. Human reaction latency (0.8s) governs braking.
             </div>
             <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: var(--text-secondary);">
               <span style="font-weight: 700; color: var(--text-primary); text-transform: uppercase; font-size: 0.725rem; letter-spacing: 0.05em;">Scoreboard:</span>
@@ -567,7 +567,7 @@
           <ul class="feature-list">
             <li class="feature-item">
               <span class="feature-icon-planned">◷</span>
-              <span><strong>Planned: Target Detection Range (100–120 m)</strong> — Target range 100–120 m with an automotive long-range radar, AI acceleration module, and low-light vision module (design target, not measured or built yet).</span>
+              <span><strong>Planned: Target Detection Range (0.2–250 m)</strong> — Target range 200–250 m forward highway detection with 0.2 m near-field bumper coverage using an automotive 77 GHz long-range radar, AI acceleration module, low-light vision, and ultrasonic arrays (design target, standard modern automotive ADAS, not measured or built yet).</span>
             </li>
             <li class="feature-item">
               <span class="feature-icon-planned">◷</span>
@@ -631,7 +631,7 @@
         <div class="faq-card">
           <h3 class="faq-q"><span class="faq-q-icon" aria-hidden="true">Q:</span> What is the detection range?</h3>
           <p class="faq-a">
-            The current prototype detects at about 5–6 m, so it suits low-speed use. The planned production-grade version targets 100–120 m using upgraded hardware. That target has not been built or measured yet.
+            The current prototype detects at about 0.2–6 m, suited for low-speed maneuvers (with ~20 cm ultrasonic near-field limit). The planned production-grade version targets 200–250 m for highway cruising with 0.2 m bumper proximity coverage, matching modern vehicle ADAS suites. That target has not been built or measured yet.
           </p>
         </div>
 
@@ -645,7 +645,7 @@
         <div class="faq-card">
           <h3 class="faq-q"><span class="faq-q-icon" aria-hidden="true">Q:</span> Are the numbers in the simulation real?</h3>
           <p class="faq-a">
-            Simulation speeds, distances, stopping times, and warning levels are illustrative engineering models to demonstrate perception and braking concepts, not tested physical limits. The prototype range of about 5–6 m is the owner's stated figure; the 100–120 m figure is an unbuilt future design target.
+            Simulation speeds, distances, stopping times, and warning levels are illustrative engineering models to demonstrate perception and braking concepts, not tested physical limits. The prototype range of about 0.2–6 m is the owner's tested figure; the 200–250 m figure is an unbuilt future design target.
           </p>
         </div>
       </div>

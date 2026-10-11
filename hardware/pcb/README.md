@@ -8,7 +8,7 @@ This directory contains specifications and layout guidelines for transitioning t
 
 | Stage | Implementation | Status |
 |---|---|---|
-| **Current Prototype** | Point-to-point wired prototyping board (perfboard) with through-hole resistors, LM358 breakout, and 2N2222 transistors | ✅ Tested & Functional (5–6 m range) |
+| **Current Prototype** | Point-to-point wired prototyping board (perfboard) with through-hole resistors, LM358 breakout, and 2N2222 transistors | ✅ Tested & Functional (0.2–6 m range) |
 | **Planned Production HAT** | Custom 2-layer FR-4 Printed Circuit Board (Raspberry Pi 40-pin Form Factor) | 🛠️ In Design Specification (Planned) |
 
 ---

@@ -1,7 +1,7 @@
 /**
  * ADAS-Plus Interactive Vehicle Simulation Engine
  * Synchronized Dual Viewports: Top-Down Aerial View & Driver Cockpit Windshield View
- * Mode-Specific Range Awareness: Prototype (5-6m) vs Planned (100-120m)
+ * Mode-Specific Range Awareness: Prototype (0.2-6m) vs Planned (0.2-250m)
  * Dynamic Rescaling, Realistic Physics, Audio Synthesis & Scoreboard Tracking
  */
 
@@ -9,8 +9,9 @@
   'use strict';
 
   // --- Range Constants (Mode-Specific) ---
-  const PROTOTYPE_RANGE_M = 6.0;  // Stated prototype detection limit
-  const PLANNED_RANGE_M = 120.0;  // Planned target range (design target, not built)
+  const PROTOTYPE_RANGE_M = 6.0;        // Stated prototype detection limit (0.2 m - 6 m)
+  const PLANNED_RANGE_M = 250.0;        // Planned target range: 200-250 m (design target, not built)
+  const MIN_DETECTION_RANGE_M = 0.2;    // Modern vehicle near-field minimum bumper range (0.2 m / 20 cm)
 
   // Road & Vehicle Dimensions
   const ROAD_WIDTH_METERS = 7.0;  // 2-lane road
@@ -149,18 +150,18 @@
       carSpeedKmh = 10.0;
       if (speedSliderVal) speedSliderVal.textContent = '10 km/h';
       if (simRangeCaption) {
-        simRangeCaption.textContent = 'Detection range: about 6 m (prototype)';
+        simRangeCaption.textContent = 'Detection range: 0.2-6 m (prototype)';
       }
     } else {
       if (speedSlider) {
         speedSlider.min = '20';
-        speedSlider.max = '120';
-        speedSlider.value = '60';
+        speedSlider.max = '130';
+        speedSlider.value = '80';
       }
-      carSpeedKmh = 60.0;
-      if (speedSliderVal) speedSliderVal.textContent = '60 km/h';
+      carSpeedKmh = 80.0;
+      if (speedSliderVal) speedSliderVal.textContent = '80 km/h';
       if (simRangeCaption) {
-        simRangeCaption.textContent = 'Target range: 100-120 m (planned, not built)';
+        simRangeCaption.textContent = 'Target range: 0.2-250 m (planned, not built)';
       }
     }
 
@@ -197,7 +198,7 @@
     if (isProto) {
       animal.z = 5.2 + Math.random() * 1.6; // Starts around 5.5 to 6.8 m
     } else {
-      animal.z = 110.0 + Math.random() * 20.0; // Starts around 110 to 130 m
+      animal.z = 210.0 + Math.random() * 40.0; // Starts around 210 to 250 m
     }
 
     if (side === 'left') {
@@ -357,9 +358,9 @@
 
     if (simOutcomeNote) {
       if (currentMode === MODE.PROTOTYPE) {
-        simOutcomeNote.textContent = 'Prototype Mode (5-6m range): Alerts driver only via buzzer. Human reaction latency (0.8s) governs braking.';
+        simOutcomeNote.textContent = 'Prototype Mode (0.2-6m range): Alerts driver only via buzzer. Human reaction latency (0.8s) governs braking.';
       } else {
-        simOutcomeNote.textContent = 'Planned Concept (100-120m target): Automatic braking + rapid seatbelt-style chime (Concept only, not built yet).';
+        simOutcomeNote.textContent = 'Planned Concept (0.2-250m target): Automatic braking + rapid seatbelt-style chime (Concept only, not built yet).';
       }
     }
 
@@ -380,11 +381,14 @@
 
     if (hudDistanceVal) {
       // Only display distance when within active detection range
-      if (animal.z <= activeRange && animal.z > 0) {
+      if (animal.z <= activeRange && animal.z >= MIN_DETECTION_RANGE_M) {
         hudDistanceVal.textContent = `${animal.z.toFixed(1)} m`;
         hudDistanceVal.style.color = 'var(--text-primary)';
+      } else if (animal.z < MIN_DETECTION_RANGE_M && animal.z > 0) {
+        hudDistanceVal.textContent = '< 0.2 m (Near-Field Bumper Limit)';
+        hudDistanceVal.style.color = 'var(--accent-red)';
       } else {
-        hudDistanceVal.textContent = isProto ? '> 6 m (Out of Range)' : '> 120 m (Out of Range)';
+        hudDistanceVal.textContent = isProto ? '> 6 m (Out of Range)' : '> 250 m (Out of Range)';
         hudDistanceVal.style.color = 'var(--text-muted)';
       }
     }
@@ -484,8 +488,8 @@
 
     // Scaling: meters to pixels rescaled for mode
     // In Prototype mode: display up to ~9m ahead of bumper
-    // In Planned mode: display up to ~135m ahead of bumper
-    const maxVisibleAheadMeters = isProto ? 8.5 : 135.0;
+    // In Planned mode: display up to ~275m ahead of bumper
+    const maxVisibleAheadMeters = isProto ? 8.5 : 275.0;
     const pxPerMeter = (carY - 15) / maxVisibleAheadMeters;
 
     // Detection Range Zone Boundary Arc
@@ -706,8 +710,8 @@
     const dist = Math.max(0.4, animal.z);
 
     // Perspective depth calculation normalized to mode range
-    // Ensures natural scale whether at 5-6m (prototype) or 100-120m (planned)
-    const normDist = isProto ? (dist / 8.5) : (dist / 135.0);
+    // Ensures natural scale whether at 0.2-6m (prototype) or 0.2-250m (planned)
+    const normDist = isProto ? (dist / 8.5) : (dist / 275.0);
     const depthT = Math.max(0.04, Math.min(1.0, 1.0 - normDist));
     const scale = Math.pow(depthT, 1.4);
 
@@ -840,7 +844,7 @@
     // ADAS+ Zone
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px monospace';
-    ctx.fillText(isProto ? 'PROTOTYPE (6m)' : 'PLANNED (120m)', clusterX + clusterW * 0.48, clusterY + 18);
+    ctx.fillText(isProto ? 'PROTOTYPE (0.2-6m)' : 'PLANNED (0.2-250m)', clusterX + clusterW * 0.48, clusterY + 18);
 
     const stateColor = currentState === STATE.DANGER ? '#ef4444' :
                        currentState === STATE.CAUTION ? '#f59e0b' :

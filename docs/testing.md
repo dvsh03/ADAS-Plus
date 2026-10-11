@@ -15,7 +15,7 @@
 - **Inference Speed**: ~22–30 FPS on Raspberry Pi 4 / PC (192×192 input); ~1–2 FPS on Raspberry Pi Zero W with 1.5s detection polling interval.
 
 ### 2. Prototype Detection Range & Visual Gating Test
-- **Range Tested**: **5–6 m** system detection window.
+- **Range Tested**: **0.2–6 m** physical prototype detection window (minimum ~20 cm ultrasonic near-field limit up to 5–6 m optical/radar window).
 - **Test Conditions**:
   - Low-speed vehicle approach tests and indoor/outdoor bench tests.
   - Obstacle targets: stray animals (cow, dog profiles), pedestrians, and stationary roadway obstacles.
