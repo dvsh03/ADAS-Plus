@@ -353,7 +353,11 @@
       btnMotionSteady.setAttribute('aria-pressed', isSteady ? 'true' : 'false');
     }
     playAlertSound('click');
-    spawnAnimal(currentScenario);
+    if (activeDemoState === 'auto') {
+      spawnAnimal(currentScenario);
+    } else {
+      triggerDemoState(activeDemoState);
+    }
   }
 
   // --- State Demo Selector (Auto, Caution, Danger, Safe Stop) ---
@@ -378,13 +382,17 @@
     animal.type = currentScenario;
     animal.walkCycle = 0;
     animal.resolved = false;
-    animal.crossingActive = !isSteadyMode;
     outcomeTimer = 0;
 
-    // Center obstacle in vehicle path
-    animal.side = 'center';
-    animal.x = 0;
-    animal.vx = isSteadyMode ? 0 : 0.05;
+    const isSmall = animal.type === 'small';
+    const isDebris = animal.type === 'debris';
+    const canMove = !isSmall && !isDebris && !isSteadyMode;
+    animal.crossingActive = canMove;
+
+    let moveSpeed = 1.5;
+    if (animal.type === 'dog') moveSpeed = 2.5;
+    else if (animal.type === 'pedestrian') moveSpeed = 1.5;
+    else if (animal.type === 'cow') moveSpeed = 1.6;
 
     if (stateName === 'caution') {
       // Position obstacle at CAUTION threshold
@@ -395,6 +403,17 @@
       carDecelerating = false;
       alertTriggerTime = performance.now();
       currentState = STATE.CAUTION;
+
+      if (canMove) {
+        animal.side = 'left';
+        animal.x = -1.8; // visibly crossing in from left into caution zone
+        animal.vx = moveSpeed; // walking LEFT TO RIGHT
+      } else {
+        animal.side = 'center';
+        animal.x = 0;
+        animal.vx = 0;
+      }
+
       playAlertSound(isProto ? 'caution' : 'planned_chime');
       setOutcome('CAUTION', isProto ?
         'Caution Demo: Prototype optical + ultrasonic detection triggered! Driver warned via buzzer chimes.' :
@@ -409,6 +428,17 @@
       carDecelerating = true;
       alertTriggerTime = performance.now() - 500;
       currentState = STATE.DANGER;
+
+      if (canMove) {
+        animal.side = 'left';
+        animal.x = -0.8; // crossing directly in stopping corridor
+        animal.vx = moveSpeed; // walking LEFT TO RIGHT
+      } else {
+        animal.side = 'center';
+        animal.x = 0;
+        animal.vx = 0;
+      }
+
       playAlertSound(isProto ? 'danger' : 'planned_chime');
       setOutcome('DANGER', isProto ?
         'Danger Demo: Obstacle in stopping corridor! Continuous acoustic buzzer sounding, driver braking.' :
@@ -420,8 +450,18 @@
       currentSpeedKmh = 0;
       carSpeedMs = 0;
       carDecelerating = false;
-      animal.resolved = true;
       currentState = isProto ? STATE.SAFE_STOP : 'SAFE AEB STOP';
+
+      if (canMove) {
+        animal.side = 'left';
+        animal.x = -1.2;
+        animal.vx = moveSpeed; // visibly walks across in front of halted vehicle!
+      } else {
+        animal.side = 'center';
+        animal.x = 0;
+        animal.vx = 0;
+      }
+
       score.safeStops += 1;
       playAlertSound('safe_stop');
       setOutcome('SAFE_STOP', isProto ?
@@ -444,59 +484,67 @@
 
     // Spawn distance scaled to mode range
     if (isProto) {
-      animal.z = 5.2 + Math.random() * 1.5; // Starts around 5.2 to 6.7 m
+      // Tested prototype envelope: 0.2–6.0 m
+      // Spawn at 6.2–6.8 m so vehicle detects entering hazard within range
+      animal.z = 6.2 + Math.random() * 0.6;
     } else {
-      animal.z = 170.0 + Math.random() * 55.0; // Starts around 170 to 225 m
+      animal.z = 175.0 + Math.random() * 45.0; // Starts around 175 to 220 m
     }
 
     if (type === 'small') {
       // Small crushed soda can / tiny pebble (<15 cm)
       animal.side = 'center';
-      animal.x = (Math.random() - 0.5) * 0.7; // Directly in vehicle lane
+      animal.x = (Math.random() - 0.5) * 0.6; // Directly in vehicle lane
       animal.vx = 0;
       animal.widthMeters = 0.25;
       animal.lengthMeters = 0.25;
+      animal.crossingActive = false;
     } else if (type === 'debris') {
       // Road debris is stationary in the vehicle path
       animal.side = 'center';
-      animal.x = (Math.random() - 0.5) * 1.0; // In vehicle lane corridor
+      animal.x = (Math.random() - 0.5) * 0.8; // In vehicle lane corridor
       animal.vx = 0;
       animal.widthMeters = 1.1;
       animal.lengthMeters = 1.1;
+      animal.crossingActive = false;
     } else if (isSteadyMode) {
       // STEADY MODE: Animal stands stationary right in the center lane!
       animal.side = 'center';
-      animal.x = (Math.random() - 0.5) * 0.6; // In center lane corridor
+      animal.x = (Math.random() - 0.5) * 0.5; // In center lane corridor
       animal.vx = 0;
       animal.widthMeters = type === 'cow' ? 1.8 : type === 'dog' ? 0.8 : 0.6;
       animal.lengthMeters = type === 'cow' ? 2.2 : type === 'dog' ? 1.2 : 0.6;
+      animal.crossingActive = false;
     } else {
       // MOVING MODE: Animal crosses laterally across roadway from shoulder
-      const side = SIDES[Math.floor(Math.random() * (SIDES.length - 1))]; // left or right
+      // Primary movement is LEFT-TO-RIGHT so user clearly sees the crossing
+      const side = (Math.random() < 0.7) ? 'left' : 'right';
       animal.side = side;
 
+      let speed;
       if (type === 'dog') {
         animal.widthMeters = 0.8;
         animal.lengthMeters = 1.2;
-        const baseSpeed = isProto ? (1.8 + Math.random() * 0.6) : (2.6 + Math.random() * 0.9);
-        animal.vx = side === 'left' ? baseSpeed : -baseSpeed;
+        speed = isProto ? 2.6 : 3.0; // Swift canine dart across road
       } else if (type === 'pedestrian') {
         animal.widthMeters = 0.6;
         animal.lengthMeters = 0.6;
-        const baseSpeed = isProto ? (0.95 + Math.random() * 0.35) : (1.3 + Math.random() * 0.4);
-        animal.vx = side === 'left' ? baseSpeed : -baseSpeed;
+        speed = isProto ? 1.5 : 1.7; // Brisk walk
       } else {
+        // Gir Cow
         animal.widthMeters = 1.8;
         animal.lengthMeters = 2.2;
-        const baseSpeed = isProto ? (0.75 + Math.random() * 0.35) : (1.3 + Math.random() * 0.5);
-        animal.vx = side === 'left' ? baseSpeed : -baseSpeed;
+        speed = isProto ? 1.6 : 1.8; // Bovine crossing trot
       }
 
       if (side === 'left') {
-        animal.x = -ROAD_WIDTH_METERS / 2 - (isProto ? 1.5 : 2.5);
+        animal.x = -2.8; // Left road shoulder (clearly in view)
+        animal.vx = speed; // Moving LEFT TO RIGHT across the lane
       } else {
-        animal.x = ROAD_WIDTH_METERS / 2 + (isProto ? 1.5 : 2.5);
+        animal.x = 2.8;  // Right road shoulder
+        animal.vx = -speed; // Moving RIGHT TO LEFT across the lane
       }
+      animal.crossingActive = true;
     }
 
     // Always reset vehicle dynamics smoothly to automated cruise speed
@@ -514,14 +562,6 @@
   function updateSimulation(dt) {
     if (!isRunning) return;
 
-    // If an alert state is being manually demoed, keep car dynamics appropriate to that demo
-    if (activeDemoState === 'safestop') {
-      currentSpeedKmh = 0;
-      carSpeedMs = 0;
-      updateHUD(0, 99);
-      return;
-    }
-
     const isProto = currentMode === MODE.PROTOTYPE;
     const activeRange = isProto ? PROTOTYPE_RANGE_M : PLANNED_RANGE_M;
     const reactionTime = isProto ? PROTOTYPE_REACTION_SEC : PLANNED_REACTION_SEC;
@@ -531,11 +571,51 @@
     roadScrollOffset = (roadScrollOffset + carSpeedMs * dt * (isProto ? 85 : 28)) % 1000;
 
     // Obstacle walking animation and lateral displacement
-    animal.walkCycle += dt * (isProto ? 3.8 : 4.8);
-    if (animal.crossingActive && animal.vx !== 0) {
+    if (animal.crossingActive && Math.abs(animal.vx) > 0.05) {
+      animal.walkCycle += dt * (isProto ? 5.2 : 5.8);
       animal.x += animal.vx * dt;
+    } else {
+      animal.walkCycle = 0;
     }
 
+    // --- HANDLE DEMO STATES (caution, danger, safestop) ---
+    if (activeDemoState !== 'auto') {
+      // In demo states, maintain fixed distance z so user can inspect the state without interruption
+      if (activeDemoState === 'caution') {
+        animal.z = isProto ? 4.8 : 175.0;
+        currentState = STATE.CAUTION;
+        currentSpeedKmh = targetCruiseKmh;
+        carSpeedMs = currentSpeedKmh / 3.6;
+      } else if (activeDemoState === 'danger') {
+        animal.z = isProto ? 2.4 : 65.0;
+        currentState = STATE.DANGER;
+        currentSpeedKmh = targetCruiseKmh * 0.75;
+        carSpeedMs = currentSpeedKmh / 3.6;
+        carDecelerating = true;
+      } else if (activeDemoState === 'safestop') {
+        animal.z = isProto ? 1.6 : 14.0;
+        currentState = isProto ? STATE.SAFE_STOP : 'SAFE AEB STOP';
+        currentSpeedKmh = 0;
+        carSpeedMs = 0;
+        carDecelerating = false;
+      }
+
+      // If in moving mode during demo, oscillate continuously between road shoulders (-2.8m and +2.8m)
+      if (animal.crossingActive && animal.vx !== 0) {
+        if (animal.x > 2.8 && animal.vx > 0) {
+          animal.vx = -Math.abs(animal.vx);
+        } else if (animal.x < -2.8 && animal.vx < 0) {
+          animal.vx = Math.abs(animal.vx);
+        }
+      }
+
+      const totalStoppingDist = (carSpeedMs * reactionTime) + ((carSpeedMs * carSpeedMs) / (2 * brakeDecel));
+      const warningTimeSec = carSpeedMs > 0.1 ? (activeRange / carSpeedMs) : 99.0;
+      updateHUD(totalStoppingDist, warningTimeSec);
+      return;
+    }
+
+    // --- AUTO CYCLE PHYSICS & DYNAMICS ---
     // Relative longitudinal approach
     animal.z -= carSpeedMs * dt;
 
@@ -543,8 +623,6 @@
     const reactionDist = carSpeedMs * reactionTime;
     const brakingDist = (carSpeedMs * carSpeedMs) / (2 * brakeDecel);
     const totalStoppingDist = reactionDist + brakingDist;
-
-    // Warning Time: range / speed
     const warningTimeSec = carSpeedMs > 0.1 ? (activeRange / carSpeedMs) : 99.0;
 
     // Hazard geometry: in vehicle path or entering
@@ -555,16 +633,13 @@
                             (isSteadyMode && inPath);
     // Small obstacles (<15cm) are below vehicle ground clearance: treated as drivable/roll-over safe!
     const isThreat = (animal.type !== 'small') && (inPath || headingIntoPath);
-
-    // Range Gated Detection Logic
     const isWithinRange = animal.z <= activeRange;
 
     if (!animal.resolved) {
       if (animal.z <= 0.6) {
-        // Reached bumper level
+        // Reached front bumper level
         animal.resolved = true;
         if (animal.type === 'small') {
-          // Safe roll-over under vehicle ground clearance (no collision, no phantom braking)
           score.cleared += 1;
           currentState = STATE.CLEAR;
           setOutcome('PASSED', 'Small item (<15 cm) safely cleared: Vehicle ground clearance allows safe roll-over without phantom braking.');
@@ -572,8 +647,8 @@
           score.collisions += 1;
           currentState = STATE.COLLISION;
           const msg = isProto ?
-            `Collision with ${animal.type}! Prototype detected hazard at 5–6 m, but human reaction time exceeded stopping distance at this speed.` :
-            `Collision with ${animal.type}! Severe obstacle entry within emergency stopping envelope.`;
+            `Collision with ${formatObstacleName(animal.type)}! Prototype detected hazard at 5–6 m, but human reaction time exceeded stopping distance at this speed.` :
+            `Collision with ${formatObstacleName(animal.type)}! Severe obstacle entry within emergency stopping envelope.`;
           setOutcome('COLLISION', msg);
         } else {
           score.cleared += 1;
@@ -595,8 +670,8 @@
         setOutcome('SAFE_STOP', msg);
         playAlertSound('safe_stop');
         updateScoreboardUI();
-      } else if (animal.crossingActive && animal.vx !== 0 && ((animal.vx > 0 && animal.x > ROAD_WIDTH_METERS / 2 + 1.2) || (animal.vx < 0 && animal.x < -ROAD_WIDTH_METERS / 2 - 1.2))) {
-        // Obstacle walked completely clear
+      } else if (animal.crossingActive && animal.vx !== 0 && ((animal.vx > 0 && animal.x > ROAD_WIDTH_METERS / 2 + 0.8) || (animal.vx < 0 && animal.x < -ROAD_WIDTH_METERS / 2 - 0.8))) {
+        // Obstacle walked completely clear across the road
         animal.resolved = true;
         score.cleared += 1;
         setOutcome('PASSED', `${formatObstacleName(animal.type)} cleared the roadway safely.`);
@@ -619,7 +694,7 @@
       }
     }
 
-    // Braking Logic
+    // Braking Logic (Auto mode)
     if (activeDemoState === 'auto') {
       if (currentMode === MODE.PLANNED) {
         if ((currentState === STATE.DANGER || currentState === STATE.CAUTION) && !carDecelerating) {
@@ -635,7 +710,7 @@
       }
     }
 
-    // Dynamics: brake or accelerate to cruise speed
+    // Dynamics: brake or accelerate back to cruise speed
     if (carDecelerating) {
       carSpeedMs = Math.max(0, carSpeedMs - brakeDecel * dt);
       currentSpeedKmh = carSpeedMs * 3.6;
@@ -644,10 +719,10 @@
       currentSpeedKmh = carSpeedMs * 3.6;
     }
 
-    // Cycle delay
+    // Cycle delay: Once resolved in auto mode, wait 2.2s then spawn next obstacle
     if (animal.resolved && activeDemoState === 'auto') {
       outcomeTimer += dt;
-      if (outcomeTimer >= 2.0) {
+      if (outcomeTimer >= 2.2) {
         outcomeTimer = 0;
         spawnAnimal(currentScenario);
       }
@@ -960,7 +1035,7 @@
 
   function drawTopObstacle(ctx, x, y, type, walkCycle, vx, isDetected) {
     ctx.save();
-    const legOffset = Math.sin(walkCycle) * 3;
+    const legOffset = (Math.abs(vx) > 0.05) ? Math.sin(walkCycle) * 3 : 0;
 
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -1236,7 +1311,7 @@
     ctx.ellipse(animalScreenX, groundY - 2, animalW * 0.48, animalH * 0.14, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const legPhase = Math.sin(animal.walkCycle) * (animalH * 0.14);
+    const legPhase = (Math.abs(animal.vx) > 0.05) ? Math.sin(animal.walkCycle) * (animalH * 0.14) : 0;
     const isFacingRight = animal.vx >= 0;
 
     // --- PHOTOREALISTIC CHARACTER RENDERING ---
