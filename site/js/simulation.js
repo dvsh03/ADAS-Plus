@@ -1,23 +1,30 @@
 /**
  * ADAS-Plus Interactive Vehicle Simulation Engine
  * Synchronized Dual Viewports: Top-Down Aerial View & Driver Cockpit Windshield View
- * High-DPI Canvas Rendering | Zero Dependencies | Full Accessibility Support
+ * Mode-Specific Range Awareness: Prototype (5-6m) vs Planned (100-120m)
+ * Dynamic Rescaling, Realistic Physics, Audio Synthesis & Scoreboard Tracking
  */
 
 (function () {
   'use strict';
 
-  // --- Configuration & Constants ---
-  const ROAD_WIDTH_METERS = 7.0; // Two-lane road (3.5m each lane)
+  // --- Range Constants (Mode-Specific) ---
+  const PROTOTYPE_RANGE_M = 6.0;  // Stated prototype detection limit
+  const PLANNED_RANGE_M = 120.0;  // Planned target range (design target, not built)
+
+  // Road & Vehicle Dimensions
+  const ROAD_WIDTH_METERS = 7.0;  // 2-lane road
   const CAR_WIDTH_METERS = 1.9;
   const CAR_LENGTH_METERS = 4.2;
-  const CRUISE_SPEED_KMH = 45.0; // ~12.5 m/s
-  const DECEL_BRAKING_MS2 = 6.2; // Emergency deceleration (m/s^2)
-  const HUMAN_REACTION_TIME_SEC = 1.1; // Human driver perception-reaction delay
 
-  // Distance thresholds (meters, illustrative simulation scale)
-  const DIST_DANGER_THRESHOLD = 14.0;
-  const DIST_CAUTION_THRESHOLD = 28.0;
+  // Physics Parameters
+  const PROTOTYPE_REACTION_SEC = 0.8;  // Driver perception-reaction delay
+  const PROTOTYPE_BRAKE_MS2 = 6.0;     // Human emergency braking deceleration
+  const PLANNED_REACTION_SEC = 0.05;   // AEB electronic trigger latency (near-zero)
+  const PLANNED_BRAKE_MS2 = 7.0;       // Automotive AEB hydraulic deceleration
+
+  // Trajectory Entry Sides
+  const SIDES = ['left', 'right', 'center'];
 
   // Simulation State Enum
   const STATE = {
@@ -30,12 +37,9 @@
 
   // Modes
   const MODE = {
-    PROTOTYPE: 'prototype', // Warns driver, driver brakes after reaction delay
-    PLANNED: 'planned'     // Automatic Emergency Braking (Planned concept)
+    PROTOTYPE: 'prototype',
+    PLANNED: 'planned'
   };
-
-  // Trajectory Entry Sides
-  const SIDES = ['left', 'right', 'center'];
 
   // DOM Elements
   const topCanvas = document.getElementById('topViewCanvas');
@@ -48,20 +52,23 @@
   const btnToggleNight = document.getElementById('btnToggleNight');
   const btnPlayPause = document.getElementById('btnPlayPause');
   const btnResetSim = document.getElementById('btnResetSim');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedSliderVal = document.getElementById('speedSliderVal');
+  const simRangeCaption = document.getElementById('simRangeCaption');
 
-  // HUD DOM
+  // Telemetry HUD DOM
   const hudStatePill = document.getElementById('hudStatePill');
   const hudDistanceVal = document.getElementById('hudDistanceVal');
   const hudSpeedVal = document.getElementById('hudSpeedVal');
   const hudStoppingVal = document.getElementById('hudStoppingVal');
+  const hudWarningTimeVal = document.getElementById('hudWarningTimeVal');
   const hudBuzzerVal = document.getElementById('hudBuzzerVal');
+  const hudScoreboardVal = document.getElementById('hudScoreboardVal');
   const simOutcomeText = document.getElementById('simOutcomeText');
   const simOutcomeNote = document.getElementById('simOutcomeNote');
   const simLiveAnnouncer = document.getElementById('simLiveAnnouncer');
 
-  if (!topCanvas || !driverCanvas) {
-    return;
-  }
+  if (!topCanvas || !driverCanvas) return;
 
   const topCtx = topCanvas.getContext('2d');
   const driverCtx = driverCanvas.getContext('2d');
@@ -73,19 +80,25 @@
   let currentState = STATE.CLEAR;
 
   // Car State
-  let carSpeedKmh = CRUISE_SPEED_KMH;
-  let carSpeedMs = CRUISE_SPEED_KMH / 3.6;
+  let carSpeedKmh = 10.0; // Default for prototype (low speed)
+  let carSpeedMs = carSpeedKmh / 3.6;
   let carDecelerating = false;
-  let brakeApplied = false;
-  let alertTriggerTime = null; // Timestamp when Caution/Danger began
+  let alertTriggerTime = null;
   let roadScrollOffset = 0;
+
+  // Scoreboard
+  let score = {
+    safeStops: 0,
+    cleared: 0,
+    collisions: 0
+  };
 
   // Animal Obstacle State
   let animal = {
-    x: -5.0,        // Lateral offset from road center (meters): 0 = center lane, - = left, + = right
-    z: 60.0,        // Longitudinal distance ahead of car bumper (meters)
-    vx: 1.2,        // Lateral velocity (m/s)
-    type: 'cow',    // 'cow' or 'dog'
+    x: -3.5,
+    z: 7.0,
+    vx: 1.1,
+    type: 'cow',
     side: 'left',
     walkCycle: 0,
     widthMeters: 1.8,
@@ -94,11 +107,9 @@
     resolved: false
   };
 
-  // Outcome Tracking
   let outcomeTimer = 0;
-  let lastOutcome = null;
 
-  // Check user preference for motion
+  // Motion preference check
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (prefersReducedMotion) {
     isRunning = false;
@@ -108,7 +119,7 @@
     }
   }
 
-  // --- Canvas High-DPI Sizing Helper ---
+  // --- High-DPI Canvas Sizing ---
   function resizeCanvas(canvas, ctx) {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
@@ -124,50 +135,107 @@
     return { width, height };
   }
 
-  // --- Reset & Respawn Animal Event ---
+  // --- Mode Configuration Setup ---
+  function applyModeSettings(mode) {
+    currentMode = mode;
+    resetScoreboard();
+
+    if (mode === MODE.PROTOTYPE) {
+      if (speedSlider) {
+        speedSlider.min = '5';
+        speedSlider.max = '25';
+        speedSlider.value = '10';
+      }
+      carSpeedKmh = 10.0;
+      if (speedSliderVal) speedSliderVal.textContent = '10 km/h';
+      if (simRangeCaption) {
+        simRangeCaption.textContent = 'Detection range: about 6 m (prototype)';
+      }
+    } else {
+      if (speedSlider) {
+        speedSlider.min = '20';
+        speedSlider.max = '120';
+        speedSlider.value = '60';
+      }
+      carSpeedKmh = 60.0;
+      if (speedSliderVal) speedSliderVal.textContent = '60 km/h';
+      if (simRangeCaption) {
+        simRangeCaption.textContent = 'Target range: 100-120 m (planned, not built)';
+      }
+    }
+
+    carSpeedMs = carSpeedKmh / 3.6;
+    spawnAnimal();
+  }
+
+  function resetScoreboard() {
+    score.safeStops = 0;
+    score.cleared = 0;
+    score.collisions = 0;
+    updateScoreboardUI();
+  }
+
+  function updateScoreboardUI() {
+    if (hudScoreboardVal) {
+      hudScoreboardVal.textContent = `Stops: ${score.safeStops} | Cleared: ${score.cleared} | Hits: ${score.collisions}`;
+    }
+  }
+
+  // --- Spawn Animal Obstacle ---
   function spawnAnimal() {
     const side = SIDES[Math.floor(Math.random() * SIDES.length)];
     animal.side = side;
-    animal.type = Math.random() > 0.3 ? 'cow' : 'dog';
-    animal.z = 62.0; // Start ~60 meters ahead
+    animal.type = Math.random() > 0.35 ? 'cow' : 'dog';
     animal.walkCycle = 0;
     animal.resolved = false;
     animal.crossingActive = true;
 
-    if (side === 'left') {
-      animal.x = -ROAD_WIDTH_METERS / 2 - 2.8;
-      animal.vx = 1.35 + Math.random() * 0.4; // Walking into road from left
-    } else if (side === 'right') {
-      animal.x = ROAD_WIDTH_METERS / 2 + 2.8;
-      animal.vx = -(1.35 + Math.random() * 0.4); // Walking into road from right
+    const isProto = currentMode === MODE.PROTOTYPE;
+    const activeRange = isProto ? PROTOTYPE_RANGE_M : PLANNED_RANGE_M;
+
+    // Spawn distance scaled to range
+    if (isProto) {
+      animal.z = 5.2 + Math.random() * 1.6; // Starts around 5.5 to 6.8 m
     } else {
-      // Wandering slowly in lane
-      animal.x = (Math.random() - 0.5) * 1.5;
-      animal.vx = (Math.random() - 0.5) * 0.3;
+      animal.z = 110.0 + Math.random() * 20.0; // Starts around 110 to 130 m
     }
 
-    // Reset car dynamics
-    carSpeedKmh = CRUISE_SPEED_KMH;
-    carSpeedMs = CRUISE_SPEED_KMH / 3.6;
+    if (side === 'left') {
+      animal.x = -ROAD_WIDTH_METERS / 2 - (isProto ? 1.5 : 2.5);
+      animal.vx = isProto ? (0.7 + Math.random() * 0.4) : (1.4 + Math.random() * 0.6);
+    } else if (side === 'right') {
+      animal.x = ROAD_WIDTH_METERS / 2 + (isProto ? 1.5 : 2.5);
+      animal.vx = isProto ? -(0.7 + Math.random() * 0.4) : -(1.4 + Math.random() * 0.6);
+    } else {
+      animal.x = (Math.random() - 0.5) * 1.2;
+      animal.vx = (Math.random() - 0.5) * 0.25;
+    }
+
+    // Reset vehicle dynamics to current slider speed
+    carSpeedMs = carSpeedKmh / 3.6;
     carDecelerating = false;
-    brakeApplied = false;
     alertTriggerTime = null;
     currentState = STATE.CLEAR;
   }
 
-  spawnAnimal();
+  applyModeSettings(MODE.PROTOTYPE);
 
-  // --- Physics & State Update Loop ---
+  // --- Simulation Physics & State Machine ---
   let lastTimestamp = performance.now();
 
   function updateSimulation(dt) {
     if (!isRunning) return;
 
-    // Road scroll proportional to car speed
-    roadScrollOffset = (roadScrollOffset + carSpeedMs * dt * 25) % 1000;
+    const isProto = currentMode === MODE.PROTOTYPE;
+    const activeRange = isProto ? PROTOTYPE_RANGE_M : PLANNED_RANGE_M;
+    const reactionTime = isProto ? PROTOTYPE_REACTION_SEC : PLANNED_REACTION_SEC;
+    const brakeDecel = isProto ? PROTOTYPE_BRAKE_MS2 : PLANNED_BRAKE_MS2;
 
-    // Animal walking motion
-    animal.walkCycle += dt * 4.5;
+    // Road scroll proportional to car speed
+    roadScrollOffset = (roadScrollOffset + carSpeedMs * dt * (isProto ? 80 : 25)) % 1000;
+
+    // Animal walking animation and lateral displacement
+    animal.walkCycle += dt * (isProto ? 3.5 : 4.5);
     if (animal.crossingActive) {
       animal.x += animal.vx * dt;
     }
@@ -175,87 +243,103 @@
     // Relative longitudinal approach
     animal.z -= carSpeedMs * dt;
 
-    // Calculate dynamic stopping distance: d_stop = (v^2) / (2 * a)
-    const stoppingDistMeters = (carSpeedMs * carSpeedMs) / (2 * DECEL_BRAKING_MS2);
+    // Stopping distance formula: d_stopping = (v * t_reaction) + (v^2 / (2 * a))
+    const reactionDist = carSpeedMs * reactionTime;
+    const brakingDist = (carSpeedMs * carSpeedMs) / (2 * brakeDecel);
+    const totalStoppingDist = reactionDist + brakingDist;
 
-    // Hazard evaluation: Is animal in or heading into car's travel corridor?
-    const inPath = Math.abs(animal.x) < 2.0;
+    // Warning Time: range / speed
+    const warningTimeSec = carSpeedMs > 0.1 ? (activeRange / carSpeedMs) : 99.0;
+
+    // Hazard geometry: in vehicle path or entering
+    const inPath = Math.abs(animal.x) < 1.7;
     const headingIntoPath = (animal.side === 'left' && animal.vx > 0 && animal.x < 1.5) ||
                             (animal.side === 'right' && animal.vx < 0 && animal.x > -1.5);
     const isThreat = inPath || headingIntoPath;
 
-    // --- State Machine ---
+    // --- Range Gated Detection Logic ---
+    // If animal is outside mode detection range, it is NOT detected!
+    const isWithinRange = animal.z <= activeRange;
+
     if (!animal.resolved) {
-      if (animal.z <= 0.8) {
-        // Animal reached or passed vehicle bumper
+      if (animal.z <= 0.6) {
+        // Animal reached vehicle bumper level
         animal.resolved = true;
-        if (Math.abs(animal.x) < 1.4) {
-          // Collision event
+        if (Math.abs(animal.x) < 1.3) {
+          score.collisions += 1;
           currentState = STATE.DANGER;
-          setOutcome('COLLISION', 'Animal was in vehicle path. Human reaction latency exceeded buffer distance.');
+          const msg = isProto ?
+            'Collision! Prototype detected obstacle at 5-6 m, but human reaction time exceeded stopping distance at this speed.' :
+            'Collision! Severe obstacle entry within stopping distance.';
+          setOutcome('COLLISION', msg);
         } else {
-          // Animal passed safely
-          setOutcome('PASSED', 'Animal crossed or cleared lane safely.');
+          score.cleared += 1;
+          setOutcome('PASSED', 'Animal crossed road safely outside vehicle corridor.');
         }
-      } else if (carSpeedMs <= 0.2) {
-        // Car came to a complete stop before hitting animal
+        updateScoreboardUI();
+      } else if (carSpeedMs <= 0.15) {
+        // Vehicle stopped safely before animal
         animal.resolved = true;
-        setOutcome('SAFE_STOP', `Vehicle safely halted ${Math.max(0, animal.z).toFixed(1)} m before animal.`);
-      } else if (isThreat && (animal.z < DIST_DANGER_THRESHOLD || animal.z < stoppingDistMeters * 1.15)) {
-        currentState = STATE.DANGER;
-        if (!alertTriggerTime) alertTriggerTime = performance.now();
-      } else if (isThreat && animal.z < DIST_CAUTION_THRESHOLD) {
-        currentState = STATE.CAUTION;
-        if (!alertTriggerTime) alertTriggerTime = performance.now();
-      } else if (animal.z < 55.0) {
+        score.safeStops += 1;
+        const distMargin = Math.max(0, animal.z).toFixed(1);
+        const msg = isProto ?
+          `Safe human stop: Driver alerted by prototype buzzer and halted ${distMargin} m before animal.` :
+          `Safe AEB stop: Automatic emergency braking halted car ${distMargin} m before animal (Planned concept).`;
+        setOutcome('SAFE_STOP', msg);
+        updateScoreboardUI();
+      } else if (isWithinRange && isThreat) {
+        // Inside detection range and on collision course
+        if (animal.z < totalStoppingDist * 1.1 || animal.z < activeRange * 0.4) {
+          currentState = STATE.DANGER;
+          if (!alertTriggerTime) alertTriggerTime = performance.now();
+        } else {
+          currentState = STATE.CAUTION;
+          if (!alertTriggerTime) alertTriggerTime = performance.now();
+        }
+      } else if (isWithinRange) {
         currentState = STATE.DETECTED;
       } else {
+        // Beyond detection range: animal visible on screen, but system is CLEAR (no box, no warning)
         currentState = STATE.CLEAR;
       }
     }
 
-    // --- Braking Response Logic Based on Mode ---
+    // --- Braking Response Logic ---
     if (currentMode === MODE.PLANNED) {
-      // Planned Concept Mode: Automatic Emergency Braking (Zero human reaction delay)
+      // Planned Mode: Automatic Emergency Braking (near-zero delay ~0.05s)
       if ((currentState === STATE.DANGER || currentState === STATE.CAUTION) && !carDecelerating) {
         carDecelerating = true;
-        brakeApplied = true;
       }
     } else {
-      // Working Prototype Mode: Driver Warns Only (Human Reaction Delay)
+      // Prototype Mode: Human driver brakes after ~0.8s reaction latency
       if ((currentState === STATE.DANGER || currentState === STATE.CAUTION) && alertTriggerTime) {
         const timeSinceAlertSec = (performance.now() - alertTriggerTime) / 1000.0;
-        if (timeSinceAlertSec >= HUMAN_REACTION_TIME_SEC) {
-          // Driver hits brakes after reaction time
+        if (timeSinceAlertSec >= PROTOTYPE_REACTION_SEC) {
           carDecelerating = true;
-          brakeApplied = true;
         }
       }
     }
 
     // Apply deceleration
     if (carDecelerating) {
-      carSpeedMs = Math.max(0, carSpeedMs - DECEL_BRAKING_MS2 * dt);
+      carSpeedMs = Math.max(0, carSpeedMs - brakeDecel * dt);
       carSpeedKmh = carSpeedMs * 3.6;
     }
 
-    // Handle outcome transition timeout
+    // Outcome cycle delay
     if (animal.resolved) {
       outcomeTimer += dt;
-      if (outcomeTimer >= 3.0) {
+      if (outcomeTimer >= 2.6) {
         outcomeTimer = 0;
         spawnAnimal();
       }
     }
 
-    updateHUD(stoppingDistMeters);
+    updateHUD(totalStoppingDist, warningTimeSec);
   }
 
   // --- Outcome Reporting ---
   function setOutcome(type, message) {
-    lastOutcome = { type, message };
-    outcomeTimer = 0;
-
     let icon = '🛡️';
     let textClass = 'color: var(--accent-emerald)';
 
@@ -273,30 +357,35 @@
 
     if (simOutcomeNote) {
       if (currentMode === MODE.PROTOTYPE) {
-        simOutcomeNote.textContent = 'Prototype Mode: Alerts driver only. The human driver brakes manually after reaction time.';
+        simOutcomeNote.textContent = 'Prototype Mode (5-6m range): Alerts driver only via buzzer. Human reaction latency (0.8s) governs braking.';
       } else {
-        simOutcomeNote.textContent = 'Planned Concept: Automatic emergency braking halts car without human reaction lag (Not implemented in prototype).';
+        simOutcomeNote.textContent = 'Planned Concept (100-120m target): Automatic braking + rapid seatbelt-style chime (Concept only, not built yet).';
       }
     }
 
-    // Announce to screen readers
     if (simLiveAnnouncer) {
-      simLiveAnnouncer.textContent = `Simulation result: ${message}`;
+      simLiveAnnouncer.textContent = `Simulation event: ${message}`;
     }
   }
 
-  // --- HUD Update ---
-  function updateHUD(stoppingDistMeters) {
+  // --- Update HUD DOM ---
+  function updateHUD(stoppingDistMeters, warningTimeSec) {
     if (hudStatePill) {
       hudStatePill.className = `hud-state-pill state-${currentState.toLowerCase()}`;
       hudStatePill.textContent = currentState;
     }
 
+    const isProto = currentMode === MODE.PROTOTYPE;
+    const activeRange = isProto ? PROTOTYPE_RANGE_M : PLANNED_RANGE_M;
+
     if (hudDistanceVal) {
-      if (animal.z > 0 && animal.z < 60) {
+      // Only display distance when within active detection range
+      if (animal.z <= activeRange && animal.z > 0) {
         hudDistanceVal.textContent = `${animal.z.toFixed(1)} m`;
+        hudDistanceVal.style.color = 'var(--text-primary)';
       } else {
-        hudDistanceVal.textContent = '-- m';
+        hudDistanceVal.textContent = isProto ? '> 6 m (Out of Range)' : '> 120 m (Out of Range)';
+        hudDistanceVal.style.color = 'var(--text-muted)';
       }
     }
 
@@ -308,20 +397,37 @@
       hudStoppingVal.textContent = `${stoppingDistMeters.toFixed(1)} m`;
     }
 
+    if (hudWarningTimeVal) {
+      if (warningTimeSec >= 90) {
+        hudWarningTimeVal.textContent = '∞ s';
+      } else {
+        hudWarningTimeVal.textContent = `${warningTimeSec.toFixed(1)} s`;
+      }
+    }
+
     if (hudBuzzerVal) {
       if (currentState === STATE.DANGER) {
-        hudBuzzerVal.textContent = 'Continuous Alarm';
-        hudBuzzerVal.style.color = 'var(--accent-rose)';
+        if (isProto) {
+          hudBuzzerVal.textContent = 'Continuous Alarm';
+          hudBuzzerVal.style.color = 'var(--accent-rose)';
+        } else {
+          hudBuzzerVal.textContent = 'Rapid Seatbelt-Style Chime';
+          hudBuzzerVal.style.color = 'var(--accent-rose)';
+        }
       } else if (currentState === STATE.CAUTION) {
-        hudBuzzerVal.textContent = 'Pulsed Chime';
-        hudBuzzerVal.style.color = 'var(--accent-amber)';
+        if (isProto) {
+          hudBuzzerVal.textContent = 'Pulsed Chime';
+          hudBuzzerVal.style.color = 'var(--accent-amber)';
+        } else {
+          hudBuzzerVal.textContent = 'Seatbelt Warning Chime';
+          hudBuzzerVal.style.color = 'var(--accent-amber)';
+        }
       } else {
         hudBuzzerVal.textContent = 'Silent (Clear)';
         hudBuzzerVal.style.color = 'var(--text-muted)';
       }
     }
 
-    // Windshield flash overlay on Danger
     if (flashOverlay) {
       if (currentState === STATE.DANGER) {
         flashOverlay.classList.add('active-danger');
@@ -332,19 +438,20 @@
   }
 
   // ============================================================
-  // RENDER 1: BIRD'S-EYE TOP-DOWN ROAD VIEW
+  // RENDER 1: TOP-DOWN AERIAL ROAD VIEW (Rescaled per mode)
   // ============================================================
   function drawTopView() {
     const { width, height } = resizeCanvas(topCanvas, topCtx);
     const ctx = topCtx;
+    const isProto = currentMode === MODE.PROTOTYPE;
+    const activeRange = isProto ? PROTOTYPE_RANGE_M : PLANNED_RANGE_M;
 
-    // Background Verge / Grass
-    const grassColor = isNightMode ? '#0c1514' : '#1e3328';
-    ctx.fillStyle = grassColor;
+    // Background verge
+    ctx.fillStyle = isNightMode ? '#0a1413' : '#1e3328';
     ctx.fillRect(0, 0, width, height);
 
-    // Road Dimensions
-    const roadWidthPx = Math.min(width * 0.72, 240);
+    // Roadway dimensions
+    const roadWidthPx = Math.min(width * 0.72, 230);
     const roadLeft = (width - roadWidthPx) / 2;
     const roadRight = roadLeft + roadWidthPx;
     const roadCenter = width / 2;
@@ -353,12 +460,12 @@
     ctx.fillStyle = isNightMode ? '#10141d' : '#1e2430';
     ctx.fillRect(roadLeft, 0, roadWidthPx, height);
 
-    // Shoulder Curbs
-    ctx.fillStyle = isNightMode ? '#2a3344' : '#475569';
-    ctx.fillRect(roadLeft - 4, 0, 4, height);
-    ctx.fillRect(roadRight, 0, 4, height);
+    // Curbs
+    ctx.fillStyle = isNightMode ? '#283243' : '#475569';
+    ctx.fillRect(roadLeft - 3, 0, 3, height);
+    ctx.fillRect(roadRight, 0, 3, height);
 
-    // Center Dashed Lane Lines (Animated)
+    // Center Dashed Lane Markings
     ctx.strokeStyle = isNightMode ? '#64748b' : '#f8fafc';
     ctx.lineWidth = 3;
     ctx.setLineDash([18, 14]);
@@ -367,194 +474,141 @@
     ctx.moveTo(roadCenter, 0);
     ctx.lineTo(roadCenter, height);
     ctx.stroke();
-    ctx.setLineDash([]); // Reset dash
+    ctx.setLineDash([]);
 
-    // Roadside Trees / Markers scrolling
-    ctx.fillStyle = isNightMode ? '#142921' : '#2d5a44';
-    const treeSpacing = 70;
-    const treeOffset = roadScrollOffset % treeSpacing;
-    for (let y = -treeSpacing + treeOffset; y < height + treeSpacing; y += treeSpacing) {
-      // Left trees
-      ctx.beginPath();
-      ctx.arc(roadLeft - 22, y, 12, 0, Math.PI * 2);
-      ctx.fill();
-      // Right trees
-      ctx.beginPath();
-      ctx.arc(roadRight + 22, y, 12, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Car Position (fixed near bottom)
-    const carY = height * 0.74;
+    // Vehicle position (fixed near bottom)
+    const carY = height * 0.76;
     const carWidthPx = (CAR_WIDTH_METERS / ROAD_WIDTH_METERS) * roadWidthPx;
     const carHeightPx = (CAR_LENGTH_METERS / ROAD_WIDTH_METERS) * roadWidthPx;
     const carX = roadCenter - carWidthPx / 2;
 
-    // Headlight / IR Illumination Beams (Top View)
-    if (isNightMode) {
-      // 850 nm IR / Headlight Light Cone forward
-      const coneGrad = ctx.createRadialGradient(
-        roadCenter, carY, 10,
-        roadCenter, carY - 140, 180
-      );
-      coneGrad.addColorStop(0, 'rgba(59, 130, 246, 0.45)');
-      coneGrad.addColorStop(0.5, 'rgba(16, 185, 129, 0.2)');
-      coneGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    // Scaling: meters to pixels rescaled for mode
+    // In Prototype mode: display up to ~9m ahead of bumper
+    // In Planned mode: display up to ~135m ahead of bumper
+    const maxVisibleAheadMeters = isProto ? 8.5 : 135.0;
+    const pxPerMeter = (carY - 15) / maxVisibleAheadMeters;
 
-      ctx.fillStyle = coneGrad;
+    // Detection Range Zone Boundary Arc
+    const detectionArcRadiusPx = activeRange * pxPerMeter;
+    ctx.save();
+    ctx.strokeStyle = isProto ? 'rgba(16, 185, 129, 0.45)' : 'rgba(59, 130, 246, 0.45)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.arc(roadCenter, carY, Math.min(detectionArcRadiusPx, height * 0.85), -Math.PI * 0.85, -Math.PI * 0.15);
+    ctx.stroke();
+    ctx.restore();
+
+    // Night Mode Headlight / IR Illumination Cones
+    if (isNightMode) {
+      const beamGrad = ctx.createRadialGradient(roadCenter, carY, 10, roadCenter, carY - 120, 180);
+      beamGrad.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+      beamGrad.addColorStop(0.6, 'rgba(16, 185, 129, 0.15)');
+      beamGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = beamGrad;
       ctx.beginPath();
       ctx.moveTo(carX + 4, carY);
-      ctx.lineTo(roadLeft - 20, carY - 200);
-      ctx.lineTo(roadRight + 20, carY - 200);
+      ctx.lineTo(roadLeft - 15, carY - 180);
+      ctx.lineTo(roadRight + 15, carY - 180);
       ctx.lineTo(carX + carWidthPx - 4, carY);
       ctx.closePath();
       ctx.fill();
     }
 
-    // Ultrasonic / Radar Range Sensor Arc (gated detection visual)
-    if (currentState !== STATE.CLEAR) {
-      ctx.strokeStyle = currentState === STATE.DANGER ? 'rgba(239, 68, 68, 0.65)' :
-                        currentState === STATE.CAUTION ? 'rgba(245, 158, 11, 0.6)' :
-                        'rgba(6, 182, 212, 0.4)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.arc(roadCenter, carY, 110, -Math.PI * 0.8, -Math.PI * 0.2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
+    // Draw Top-View Car
+    drawTopCar(ctx, carX, carY, carWidthPx, carHeightPx);
 
-    // Draw Top-View Vehicle
-    drawTopViewCar(ctx, carX, carY, carWidthPx, carHeightPx);
-
-    // Draw Top-View Animal
-    // Scale: distance in meters to pixels
-    const pxPerMeter = (height * 0.7) / 50.0;
+    // Draw Animal
     const animalY = carY - (animal.z * pxPerMeter);
     const animalXPx = roadCenter + ((animal.x / (ROAD_WIDTH_METERS / 2)) * (roadWidthPx / 2));
 
-    if (animalY > -40 && animalY < height + 40) {
-      drawTopViewAnimal(ctx, animalXPx, animalY, animal.type, animal.walkCycle, animal.vx);
+    const isDetected = animal.z <= activeRange && currentState !== STATE.CLEAR;
+
+    if (animalY > -30 && animalY < height + 30) {
+      drawTopAnimal(ctx, animalXPx, animalY, animal.type, animal.walkCycle, animal.vx, isDetected);
     }
   }
 
-  function drawTopViewCar(ctx, x, y, w, h) {
+  function drawTopCar(ctx, x, y, w, h) {
     ctx.save();
-
-    // Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
-    ctx.roundRect(x - 2, y + 2, w + 4, h + 4, 8);
+    ctx.roundRect(x - 2, y + 2, w + 4, h + 4, 6);
     ctx.fill();
 
-    // Car Body
     ctx.fillStyle = '#2563eb';
     ctx.beginPath();
-    ctx.roundRect(x, y, w, h, 8);
+    ctx.roundRect(x, y, w, h, 6);
     ctx.fill();
 
-    // Windshield
     ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.roundRect(x + 4, y + 8, w - 8, h * 0.22, 3);
-    ctx.fill();
+    ctx.fillRect(x + 3, y + 6, w - 6, h * 0.22);
+    ctx.fillRect(x + 4, y + h - 12, w - 8, h * 0.16);
 
-    // Rear glass
-    ctx.beginPath();
-    ctx.roundRect(x + 5, y + h - 14, w - 10, h * 0.16, 2);
-    ctx.fill();
-
-    // Roof
-    ctx.fillStyle = '#1d4ed8';
-    ctx.fillRect(x + 5, y + h * 0.32, w - 10, h * 0.35);
-
-    // Headlights
     ctx.fillStyle = '#fef08a';
-    ctx.fillRect(x + 2, y - 1, 5, 3);
-    ctx.fillRect(x + w - 7, y - 1, 5, 3);
-
-    // Taillights
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(x + 2, y + h - 2, 5, 3);
-    ctx.fillRect(x + w - 7, y + h - 2, 5, 3);
+    ctx.fillRect(x + 2, y - 1, 4, 2);
+    ctx.fillRect(x + w - 6, y - 1, 4, 2);
 
     ctx.restore();
   }
 
-  function drawTopViewAnimal(ctx, x, y, type, walkCycle, vx) {
+  function drawTopAnimal(ctx, x, y, type, walkCycle, vx, isDetected) {
     ctx.save();
-
     const legOffset = Math.sin(walkCycle) * 3;
 
-    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
-    ctx.ellipse(x, y + 2, 12, 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + 2, 11, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Animal Body (Cow-like shape)
-    ctx.fillStyle = type === 'cow' ? '#d97706' : '#78716c';
+    ctx.fillStyle = type === 'cow' ? '#b45309' : '#78716c';
     ctx.beginPath();
-    ctx.roundRect(x - 10, y - 6, 20, 12, 4);
+    ctx.roundRect(x - 9, y - 5, 18, 10, 3);
     ctx.fill();
 
-    // Legs
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(x - 8 + legOffset, y - 8, 3, 3);
-    ctx.fillRect(x + 5 - legOffset, y - 8, 3, 3);
-    ctx.fillRect(x - 8 - legOffset, y + 5, 3, 3);
-    ctx.fillRect(x + 5 + legOffset, y + 5, 3, 3);
+    // Animated legs
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x - 7 + legOffset, y - 7, 3, 3);
+    ctx.fillRect(x + 4 - legOffset, y - 7, 3, 3);
+    ctx.fillRect(x - 7 - legOffset, y + 4, 3, 3);
+    ctx.fillRect(x + 4 + legOffset, y + 4, 3, 3);
 
-    // Head & Horns
-    const headX = vx >= 0 ? x + 11 : x - 11;
-    ctx.fillStyle = '#b45309';
+    // Head
+    const headX = vx >= 0 ? x + 10 : x - 10;
     ctx.beginPath();
-    ctx.arc(headX, y, 5, 0, Math.PI * 2);
+    ctx.arc(headX, y, 4.5, 0, Math.PI * 2);
     ctx.fill();
 
-    if (type === 'cow') {
-      ctx.fillStyle = '#fef3c7';
-      ctx.fillRect(headX - 1, y - 7, 2, 3); // horns
-      ctx.fillRect(headX - 1, y + 4, 2, 3);
-    }
-
-    // Bounding Box indicator in Top View
-    if (currentState !== STATE.CLEAR) {
+    // Bounding Box only if detected within range
+    if (isDetected) {
       const boxColor = currentState === STATE.DANGER ? '#ef4444' :
                        currentState === STATE.CAUTION ? '#f59e0b' : '#06b6d4';
       ctx.strokeStyle = boxColor;
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(x - 14, y - 10, 28, 20);
+      ctx.strokeRect(x - 13, y - 9, 26, 18);
     }
-
     ctx.restore();
   }
 
   // ============================================================
-  // RENDER 2: DRIVER WINDSHIELD PERSPECTIVE COCKPIT VIEW
+  // RENDER 2: DRIVER WINDSHIELD PERSPECTIVE (Rescaled per mode)
   // ============================================================
   function drawDriverView() {
     const { width, height } = resizeCanvas(driverCanvas, driverCtx);
     const ctx = driverCtx;
+    const isProto = currentMode === MODE.PROTOTYPE;
+    const activeRange = isProto ? PROTOTYPE_RANGE_M : PLANNED_RANGE_M;
 
     const horizonY = height * 0.44;
     const vpX = width / 2;
 
-    // --- 1. Sky & Atmosphere ---
+    // Sky
     if (isNightMode) {
       const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
       skyGrad.addColorStop(0, '#070b14');
       skyGrad.addColorStop(1, '#111827');
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, width, horizonY);
-
-      // Stars
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      for (let i = 0; i < 18; i++) {
-        const sx = (i * 47) % width;
-        const sy = (i * 23) % (horizonY * 0.7);
-        ctx.fillRect(sx, sy, 1.5, 1.5);
-      }
     } else {
       const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
       skyGrad.addColorStop(0, '#60a5fa');
@@ -564,7 +618,7 @@
       ctx.fillRect(0, 0, width, horizonY);
     }
 
-    // Rolling Hills on Horizon
+    // Horizon hills
     ctx.fillStyle = isNightMode ? '#0f172a' : '#22543d';
     ctx.beginPath();
     ctx.moveTo(0, horizonY);
@@ -574,14 +628,14 @@
     ctx.lineTo(0, horizonY);
     ctx.fill();
 
-    // --- 2. Ground / Terrain ---
+    // Roadside ground
     ctx.fillStyle = isNightMode ? '#091312' : '#1e3a2b';
     ctx.fillRect(0, horizonY, width, height - horizonY);
 
-    // --- 3. Perspective Road Trapezoid ---
-    const roadTopWidth = 32;
-    const roadBottomWidth = width * 0.95;
-    const roadBottomY = height * 0.78; // Above dashboard cluster
+    // Perspective Road Trapezoid
+    const roadTopWidth = 28;
+    const roadBottomWidth = width * 0.94;
+    const roadBottomY = height * 0.78;
 
     ctx.fillStyle = isNightMode ? '#0f172a' : '#1e293b';
     ctx.beginPath();
@@ -602,53 +656,45 @@
     ctx.lineTo(vpX + roadBottomWidth / 2, roadBottomY);
     ctx.stroke();
 
-    // Perspective Center Lane Lines
-    drawPerspectiveCenterLines(ctx, vpX, horizonY, roadBottomY);
+    // Center Dashed Markings
+    drawDriverCenterLines(ctx, vpX, horizonY, roadBottomY);
 
-    // Night Mode Headlight Illumination on Road
+    // Night Mode Headlight Beam on Road
     if (isNightMode) {
-      const beamGrad = ctx.createRadialGradient(
-        vpX, roadBottomY, 20,
-        vpX, horizonY + 20, width * 0.55
-      );
+      const beamGrad = ctx.createRadialGradient(vpX, roadBottomY, 20, vpX, horizonY + 20, width * 0.55);
       beamGrad.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
-      beamGrad.addColorStop(0.4, 'rgba(59, 130, 246, 0.2)');
+      beamGrad.addColorStop(0.4, 'rgba(59, 130, 246, 0.18)');
       beamGrad.addColorStop(1, 'rgba(0,0,0,0)');
-
       ctx.fillStyle = beamGrad;
       ctx.beginPath();
-      ctx.moveTo(vpX - 20, horizonY + 20);
-      ctx.lineTo(vpX + 20, horizonY + 20);
-      ctx.lineTo(vpX + roadBottomWidth * 0.45, roadBottomY);
-      ctx.lineTo(vpX - roadBottomWidth * 0.45, roadBottomY);
+      ctx.moveTo(vpX - 18, horizonY + 20);
+      ctx.lineTo(vpX + 18, horizonY + 20);
+      ctx.lineTo(vpX + roadBottomWidth * 0.44, roadBottomY);
+      ctx.lineTo(vpX - roadBottomWidth * 0.44, roadBottomY);
       ctx.closePath();
       ctx.fill();
     }
 
-    // --- 4. Animal Obstacle in Perspective ---
-    drawPerspectiveAnimal(ctx, vpX, horizonY, roadBottomY, roadBottomWidth);
+    // Animal in Driver Perspective
+    drawDriverPerspectiveAnimal(ctx, vpX, horizonY, roadBottomY, roadBottomWidth, activeRange, isProto);
 
-    // --- 5. Dashboard Instrument Cluster & Windshield Frame ---
-    drawDashboardCluster(ctx, width, height, roadBottomY);
+    // Dashboard Cluster
+    drawDriverDashboard(ctx, width, height, roadBottomY, isProto);
   }
 
-  function drawPerspectiveCenterLines(ctx, vpX, horizonY, roadBottomY) {
+  function drawDriverCenterLines(ctx, vpX, horizonY, roadBottomY) {
     const segments = 12;
     const offsetNorm = (roadScrollOffset % 100) / 100.0;
-
     ctx.strokeStyle = isNightMode ? '#94a3b8' : '#f8fafc';
 
     for (let i = 0; i < segments; i++) {
       const t1 = Math.pow((i + offsetNorm) / segments, 2.2);
       const t2 = Math.pow((i + 0.45 + offsetNorm) / segments, 2.2);
-
       if (t1 > 1.0 || t2 > 1.0) continue;
 
       const y1 = horizonY + (roadBottomY - horizonY) * t1;
       const y2 = horizonY + (roadBottomY - horizonY) * t2;
-      const lineWidth = 1 + t1 * 6;
-
-      ctx.lineWidth = lineWidth;
+      ctx.lineWidth = 1 + t1 * 6;
       ctx.beginPath();
       ctx.moveTo(vpX, y1);
       ctx.lineTo(vpX, y2);
@@ -656,41 +702,41 @@
     }
   }
 
-  function drawPerspectiveAnimal(ctx, vpX, horizonY, roadBottomY, roadBottomWidth) {
-    // Mapping distance Z (meters) to perspective scale
-    const dist = Math.max(0.5, animal.z);
-    // Perspective compression formula: scale ~ 1 / dist
-    const scale = Math.min(1.0, 14.0 / dist);
+  function drawDriverPerspectiveAnimal(ctx, vpX, horizonY, roadBottomY, roadBottomWidth, activeRange, isProto) {
+    const dist = Math.max(0.4, animal.z);
 
-    const groundY = horizonY + (roadBottomY - horizonY) * Math.min(1.0, Math.pow(scale, 0.82));
-    const lateralSpanAtGround = (roadBottomWidth * Math.pow(scale, 0.82));
+    // Perspective depth calculation normalized to mode range
+    // Ensures natural scale whether at 5-6m (prototype) or 100-120m (planned)
+    const normDist = isProto ? (dist / 8.5) : (dist / 135.0);
+    const depthT = Math.max(0.04, Math.min(1.0, 1.0 - normDist));
+    const scale = Math.pow(depthT, 1.4);
+
+    const groundY = horizonY + (roadBottomY - horizonY) * scale;
+    const lateralSpanAtGround = roadBottomWidth * scale;
     const animalScreenX = vpX + (animal.x / (ROAD_WIDTH_METERS / 2)) * (lateralSpanAtGround / 2);
 
-    // Dimensions in screen pixels
-    const animalH = Math.max(14, 110 * scale);
-    const animalW = animalH * 1.4;
-
-    if (dist > 58.0 || dist < 0.2) return;
-
-    ctx.save();
-
-    // Animal Silhouette / Detailed Rendering
+    const animalH = Math.max(12, 120 * scale);
+    const animalW = animalH * 1.35;
     const drawX = animalScreenX - animalW / 2;
     const drawY = groundY - animalH;
 
-    // Shadow on asphalt
+    if (dist > (activeRange * 1.25) && isProto) return; // Beyond prototype visual horizon
+
+    ctx.save();
+
+    // Shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.beginPath();
     ctx.ellipse(animalScreenX, groundY - 2, animalW * 0.45, animalH * 0.12, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Animal Body (Cow profile)
+    // Animal body
     ctx.fillStyle = isNightMode ? '#9a5312' : '#b45309';
     ctx.beginPath();
     ctx.roundRect(drawX + animalW * 0.15, drawY + animalH * 0.25, animalW * 0.65, animalH * 0.5, animalH * 0.15);
     ctx.fill();
 
-    // Animated Legs
+    // Legs with walk phase
     const legPhase = Math.sin(animal.walkCycle) * (animalH * 0.12);
     ctx.fillStyle = isNightMode ? '#78350f' : '#92400e';
     ctx.fillRect(drawX + animalW * 0.22 + legPhase, drawY + animalH * 0.7, animalW * 0.08, animalH * 0.32);
@@ -698,10 +744,9 @@
     ctx.fillRect(drawX + animalW * 0.58 + legPhase, drawY + animalH * 0.7, animalW * 0.08, animalH * 0.32);
     ctx.fillRect(drawX + animalW * 0.72 - legPhase, drawY + animalH * 0.7, animalW * 0.08, animalH * 0.32);
 
-    // Head, Snout & Horns (Facing direction based on vx)
+    // Head
     const isFacingRight = animal.vx >= 0;
     const headX = isFacingRight ? drawX + animalW * 0.75 : drawX + animalW * 0.05;
-
     ctx.fillStyle = '#b45309';
     ctx.beginPath();
     ctx.arc(headX + animalW * 0.1, drawY + animalH * 0.35, animalH * 0.2, 0, Math.PI * 2);
@@ -712,7 +757,9 @@
     ctx.fillRect(headX + (isFacingRight ? 4 : -4), drawY + animalH * 0.12, animalW * 0.06, animalH * 0.18);
 
     // --- YOLO Bounding Box & Label ---
-    if (currentState !== STATE.CLEAR) {
+    // Only drawn when within active mode detection range!
+    const isWithinRange = animal.z <= activeRange;
+    if (isWithinRange && currentState !== STATE.CLEAR) {
       const boxColor = currentState === STATE.DANGER ? '#ef4444' :
                        currentState === STATE.CAUTION ? '#f59e0b' : '#06b6d4';
 
@@ -726,22 +773,22 @@
       const textMetrics = ctx.measureText(tagText);
 
       ctx.fillStyle = boxColor;
-      ctx.fillRect(drawX - 4, drawY - 20, textMetrics.width + 10, 16);
+      ctx.fillRect(drawX - 4, drawY - 18, textMetrics.width + 10, 16);
 
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(tagText, drawX + 1, drawY - 7);
+      ctx.fillText(tagText, drawX + 1, drawY - 6);
     }
 
     ctx.restore();
   }
 
-  function drawDashboardCluster(ctx, width, height, roadBottomY) {
+  function drawDriverDashboard(ctx, width, height, roadBottomY, isProto) {
     const dashY = roadBottomY;
     const dashHeight = height - dashY;
 
     ctx.save();
 
-    // Dashboard Bumper / Hood Silhouette
+    // Dashboard Hood Silhouette
     ctx.fillStyle = isNightMode ? '#090d16' : '#0f172a';
     ctx.beginPath();
     ctx.moveTo(0, dashY);
@@ -751,7 +798,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // Subtle edge highlight
     ctx.strokeStyle = isNightMode ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.15)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -759,20 +805,19 @@
     ctx.lineTo(width, dashY);
     ctx.stroke();
 
-    // Steering Wheel Top Arc in center
+    // Steering Wheel Top Arc
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 10;
     ctx.beginPath();
     ctx.arc(width / 2, height + 40, width * 0.28, Math.PI * 1.15, Math.PI * 1.85);
     ctx.stroke();
 
-    // Central Mini-Cluster Screen (ADAS+ Display)
-    const clusterW = Math.min(220, width * 0.45);
+    // Central Cluster Display
+    const clusterW = Math.min(230, width * 0.46);
     const clusterH = dashHeight * 0.72;
     const clusterX = (width - clusterW) / 2;
     const clusterY = dashY + 10;
 
-    // Cluster screen background
     ctx.fillStyle = '#050811';
     ctx.beginPath();
     ctx.roundRect(clusterX, clusterY, clusterW, clusterH, 6);
@@ -784,7 +829,7 @@
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Speed Digital Readout (Left side of cluster)
+    // Speed Digital Readout
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px monospace';
     ctx.fillText('SPEED', clusterX + 12, clusterY + 18);
@@ -792,25 +837,17 @@
     ctx.font = 'bold 16px monospace';
     ctx.fillText(`${Math.round(carSpeedKmh)} km/h`, clusterX + 12, clusterY + 38);
 
-    // Central ADAS+ State & Range
+    // ADAS+ Zone
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px monospace';
-    ctx.fillText('ADAS+ ZONE', clusterX + clusterW * 0.52, clusterY + 18);
+    ctx.fillText(isProto ? 'PROTOTYPE (6m)' : 'PLANNED (120m)', clusterX + clusterW * 0.48, clusterY + 18);
 
     const stateColor = currentState === STATE.DANGER ? '#ef4444' :
                        currentState === STATE.CAUTION ? '#f59e0b' :
                        currentState === STATE.DETECTED ? '#06b6d4' : '#10b981';
     ctx.fillStyle = stateColor;
     ctx.font = 'bold 15px monospace';
-    ctx.fillText(currentState, clusterX + clusterW * 0.52, clusterY + 38);
-
-    // Audio Buzzer Icon indicator
-    if (currentState === STATE.DANGER || currentState === STATE.CAUTION) {
-      ctx.fillStyle = stateColor;
-      ctx.beginPath();
-      ctx.arc(clusterX + clusterW - 18, clusterY + 22, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.fillText(currentState, clusterX + clusterW * 0.48, clusterY + 38);
 
     ctx.restore();
   }
@@ -829,22 +866,29 @@
 
   requestAnimationFrame(loop);
 
-  // --- User Control Event Listeners ---
+  // --- Event Listeners ---
   if (btnPrototypeMode) {
     btnPrototypeMode.addEventListener('click', () => {
-      currentMode = MODE.PROTOTYPE;
       btnPrototypeMode.classList.add('active');
       btnPlannedMode.classList.remove('active');
-      spawnAnimal();
+      applyModeSettings(MODE.PROTOTYPE);
     });
   }
 
   if (btnPlannedMode) {
     btnPlannedMode.addEventListener('click', () => {
-      currentMode = MODE.PLANNED;
       btnPlannedMode.classList.add('active');
       btnPrototypeMode.classList.remove('active');
-      spawnAnimal();
+      applyModeSettings(MODE.PLANNED);
+    });
+  }
+
+  if (speedSlider) {
+    speedSlider.addEventListener('input', (e) => {
+      carSpeedKmh = parseFloat(e.target.value);
+      carSpeedMs = carSpeedKmh / 3.6;
+      if (speedSliderVal) speedSliderVal.textContent = `${Math.round(carSpeedKmh)} km/h`;
+      resetScoreboard();
     });
   }
 
@@ -866,11 +910,11 @@
 
   if (btnResetSim) {
     btnResetSim.addEventListener('click', () => {
+      resetScoreboard();
       spawnAnimal();
     });
   }
 
-  // Window Resize
   window.addEventListener('resize', () => {
     drawTopView();
     drawDriverView();

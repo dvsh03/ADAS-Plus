@@ -48,6 +48,7 @@
           <li><a href="#hardware" class="nav-link">Hardware</a></li>
           <li><a href="#results" class="nav-link">Results</a></li>
           <li><a href="#prototype-vs-planned" class="nav-link">Prototype vs Plan</a></li>
+          <li><a href="#faq" class="nav-link">FAQ</a></li>
           <li><a href="#demo" class="nav-link">Demo</a></li>
         </ul>
       </nav>
@@ -83,7 +84,7 @@
       </h1>
 
       <p class="hero-subtitle">
-        Stray animals, unexpected pedestrians, and unlit roadway obstacles create severe collision hazards, especially in low-light night driving. <strong>ADAS-Plus</strong> combines wireless optical capture, an edge neural network (YOLOv3-Tiny), ultrasonic ranging, and microwave Doppler radar to warn drivers in real time.
+        Stray animals, unexpected pedestrians, and unlit roadway obstacles create severe collision hazards, especially in low-light night driving. <strong>ADAS-Plus</strong> combines wireless optical capture, an edge neural network (YOLOv3-Tiny), ultrasonic ranging, and microwave Doppler radar to warn drivers in real time at short range (about 5–6 m prototype range) during low-speed maneuvers.
       </p>
 
       <div class="hero-actions">
@@ -99,6 +100,11 @@
 
       <!-- Real Verified Stats -->
       <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">5–6 m</div>
+          <div class="stat-label">Prototype Range</div>
+          <div class="stat-desc">Prototype detection range, about 5–6 m (low-speed demonstration)</div>
+        </div>
         <div class="stat-card">
           <div class="stat-number">92%</div>
           <div class="stat-label">Detection Accuracy</div>
@@ -148,6 +154,11 @@
             </button>
           </div>
 
+          <div class="sim-speed-control">
+            <label for="speedSlider" class="speed-label">Speed: <strong id="speedSliderVal">10 km/h</strong></label>
+            <input type="range" id="speedSlider" min="5" max="25" step="1" value="10" class="speed-slider" aria-label="Vehicle speed control">
+          </div>
+
           <div class="sim-toggles">
             <button id="btnToggleNight" class="control-btn" aria-label="Toggle Night Mode with Infrared Illumination">
               <span>🌙 Night + IR</span>
@@ -183,7 +194,7 @@
           </div>
         </div>
 
-        <!-- Telemetry HUD Bar -->
+        <!-- Telemetry HUD Bar (6 Columns) -->
         <div class="sim-telemetry-hud">
           <div class="hud-item">
             <span class="hud-label">ADAS+ State</span>
@@ -195,32 +206,46 @@
           </div>
           <div class="hud-item">
             <span class="hud-label">Vehicle Speed</span>
-            <div id="hudSpeedVal" class="hud-value">45 km/h</div>
+            <div id="hudSpeedVal" class="hud-value">10 km/h</div>
+          </div>
+          <div class="hud-item">
+            <span class="hud-label">Warning Time</span>
+            <div id="hudWarningTimeVal" class="hud-value">-- s</div>
           </div>
           <div class="hud-item">
             <span class="hud-label">Est. Stopping Dist.</span>
-            <div id="hudStoppingVal" class="hud-value">13.6 m</div>
+            <div id="hudStoppingVal" class="hud-value">2.6 m</div>
           </div>
           <div class="hud-item">
             <span class="hud-label">Buzzer Alert</span>
-            <div id="hudBuzzerVal" class="hud-value" style="font-size: 1rem; color: var(--text-muted);">Silent</div>
+            <div id="hudBuzzerVal" class="hud-value" style="font-size: 0.95rem; color: var(--text-muted);">Silent (Clear)</div>
           </div>
         </div>
 
         <!-- Event Outcome Bar -->
         <div class="sim-outcome-bar">
-          <div>
-            <div id="simOutcomeText" class="outcome-text">
-              <span>🚗 Vehicle cruising at safe road speed. Monitoring for obstacles...</span>
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.35rem;">
+              <div id="simOutcomeText" class="outcome-text">
+                <span>🚗 Vehicle cruising at safe road speed. Monitoring for obstacles...</span>
+              </div>
+              <div id="simRangeCaption" class="sim-range-caption-box">
+                Detection range: about 6 m (prototype)
+              </div>
             </div>
             <div id="simOutcomeNote" class="outcome-mode-note">
-              Prototype Mode: Alerts driver only. The human driver brakes manually after reaction time.
+              Prototype Mode (5-6m range): Alerts driver only via buzzer. Human reaction latency (0.8s) governs braking.
+            </div>
+            <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: var(--text-secondary);">
+              <span style="font-weight: 700; color: var(--text-primary); text-transform: uppercase; font-size: 0.725rem; letter-spacing: 0.05em;">Scoreboard:</span>
+              <span id="hudScoreboardVal" style="font-family: var(--font-mono); font-weight: 700; color: var(--accent-cyan);">Stops: 0 | Cleared: 0 | Hits: 0</span>
             </div>
           </div>
           <div class="illustrative-disclaimer-pill">
-            * Simulation values (speed, distance, stopping distance) are illustrative, not tested limits.
+            * Simulation values (speed, distance, stopping distance, warning time) are illustrative, not tested limits.
           </div>
         </div>
+        <div id="simLiveAnnouncer" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;" aria-live="polite"></div>
       </div>
     </div>
   </section>
@@ -503,6 +528,10 @@
           <ul class="feature-list">
             <li class="feature-item">
               <span class="feature-icon-check">✓</span>
+              <span><strong>Detection Range:</strong> Prototype detection range is about 5–6 m; suited for low-speed demonstrations.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-check">✓</span>
               <span><strong>Driver Alert Only:</strong> Warns driver via active buzzer chimes and web UI; does <em>NOT</em> apply vehicle brakes.</span>
             </li>
             <li class="feature-item">
@@ -538,7 +567,11 @@
           <ul class="feature-list">
             <li class="feature-item">
               <span class="feature-icon-planned">◷</span>
-              <span><strong>Planned: Automatic Emergency Braking (AEB)</strong> — Actuates vehicle braking systems automatically to halt car before impact.</span>
+              <span><strong>Planned: Target Detection Range (100–120 m)</strong> — Target range 100–120 m with an automotive long-range radar, AI acceleration module, and low-light vision module (design target, not measured or built yet).</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: Automatic Emergency Braking (AEB) &amp; Seatbelt-Style Chime</strong> — Actuates vehicle braking systems automatically to halt car before impact while sounding a rapid seatbelt-style acoustic warning chime. (Planned concept, not built yet).</span>
             </li>
             <li class="feature-item">
               <span class="feature-icon-planned">◷</span>
@@ -578,6 +611,42 @@
             <div class="cost-estimate-number">₹75,560 INR (Planning Estimate)</div>
             <div>Estimated cost of the production-grade hardware version is about INR 75,560 (planning estimate, not yet built or purchased).</div>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section id="faq" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Frequently Asked Questions</span>
+        <h2 class="section-title">Common Questions &amp; Clarifications</h2>
+        <p class="section-description">
+          Clear answers about current prototype capabilities, planned upgrades, and simulation models.
+        </p>
+      </div>
+
+      <div class="faq-grid">
+        <div class="faq-card">
+          <h3 class="faq-q"><span class="faq-q-icon" aria-hidden="true">Q:</span> What is the detection range?</h3>
+          <p class="faq-a">
+            The current prototype detects at about 5–6 m, so it suits low-speed use. The planned production-grade version targets 100–120 m using upgraded hardware. That target has not been built or measured yet.
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <h3 class="faq-q"><span class="faq-q-icon" aria-hidden="true">Q:</span> Does it work at night?</h3>
+          <p class="faq-a">
+            In the prototype, night operation relies on automated 850 nm high-power IR LED illumination triggered when camera luminance drops below threshold (&lt;55), functioning within the prototype's short 5–6 m range. The planned version targets an automotive-grade low-light vision module for extended range (design target, not measured).
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <h3 class="faq-q"><span class="faq-q-icon" aria-hidden="true">Q:</span> Are the numbers in the simulation real?</h3>
+          <p class="faq-a">
+            Simulation speeds, distances, stopping times, and warning levels are illustrative engineering models to demonstrate perception and braking concepts, not tested physical limits. The prototype range of about 5–6 m is the owner's stated figure; the 100–120 m figure is an unbuilt future design target.
+          </p>
         </div>
       </div>
     </div>
