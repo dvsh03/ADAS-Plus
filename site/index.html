@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADAS+ | Experimental Low-Cost Advanced Driver Assistance System Explainer</title>
+  <meta name="description" content="Interactive explainer showing how the ADAS+ prototype detects stray roadway animals, fuses ultrasonic and 24 GHz Doppler radar data, and alerts drivers in real time.">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dvsh03.github.io/ADAS-Plus/">
+  <meta property="og:title" content="ADAS+ | Inside-the-Car Interactive Explainer">
+  <meta property="og:description" content="See how the low-cost ADAS+ prototype combines edge computer vision, ultrasonic ranging, and radar sensor fusion to warn drivers of road hazards.">
+  <meta property="og:image" content="https://dvsh03.github.io/ADAS-Plus/favicon.svg">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ADAS+ | Inside-the-Car Interactive Explainer">
+  <meta name="twitter:description" content="Interactive simulation showing edge vision and sensor fusion for roadway wildlife hazard warning.">
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Screen reader live region for simulation announcements -->
+  <div id="simLiveAnnouncer" class="sr-only" aria-live="polite" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;"></div>
+
+  <!-- Top Sticky Navigation -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="./" class="nav-brand" aria-label="ADAS-Plus Homepage">
+        <svg class="brand-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="64" height="64" rx="16" fill="#1e293b"/>
+          <path d="M32 12 L48 18 C48 34 32 46 32 52 C32 46 16 34 16 18 Z" stroke="#3b82f6" stroke-width="3.5" stroke-linejoin="round"/>
+          <path d="M25 28 A 10 10 0 0 1 39 28" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M21 22 A 16 16 0 0 1 43 22" stroke="#93c5fd" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="32" cy="34" r="4.5" fill="#10b981"/>
+        </svg>
+        <span class="brand-text">ADAS+</span>
+        <span class="brand-badge">Prototype</span>
+      </a>
+
+      <nav>
+        <ul class="nav-menu" id="navMenu">
+          <li><a href="#simulation" class="nav-link">Simulation</a></li>
+          <li><a href="#how-it-decides" class="nav-link">How It Decides</a></li>
+          <li><a href="#hardware" class="nav-link">Hardware</a></li>
+          <li><a href="#results" class="nav-link">Results</a></li>
+          <li><a href="#prototype-vs-planned" class="nav-link">Prototype vs Plan</a></li>
+          <li><a href="#faq" class="nav-link">FAQ</a></li>
+          <li><a href="#demo" class="nav-link">Demo</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button id="themeToggleBtn" class="theme-btn" aria-label="Toggle dark/light color theme">
+          <span id="themeIcon" class="theme-icon" aria-hidden="true">🌙</span>
+        </button>
+        <a href="https://github.com/dvsh03/ADAS-Plus" target="_blank" rel="noopener noreferrer" class="btn-github" aria-label="Open ADAS-Plus GitHub Repository">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span>GitHub</span>
+        </a>
+        <button id="mobileMenuToggle" class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+          ☰
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-status-pill">
+        <span class="status-indicator-dot" aria-hidden="true"></span>
+        <span>Status: Experimental Low-Cost Prototype | Driver Warning Only</span>
+      </div>
+
+      <h1 class="hero-title">
+        Real-Time Road Hazard &amp; Animal Perception <br>
+        <span class="hero-title-gradient">Engineered for Edge Vehicles</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        Stray animals, unexpected pedestrians, and unlit roadway obstacles create severe collision hazards, especially in low-light night driving. <strong>ADAS-Plus</strong> combines wireless optical capture, an edge neural network (YOLOv3-Tiny), ultrasonic ranging, and microwave Doppler radar to warn drivers in real time at short range (about 5–6 m prototype range) during low-speed maneuvers.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#simulation" class="btn-primary">
+          <span>Launch Live Simulation</span>
+          <span aria-hidden="true">↓</span>
+        </a>
+        <a href="https://github.com/dvsh03/ADAS-Plus" target="_blank" rel="noopener noreferrer" class="btn-secondary">
+          <span>View Source on GitHub</span>
+          <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+
+      <!-- Real Verified Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">5–6 m</div>
+          <div class="stat-label">Prototype Range</div>
+          <div class="stat-desc">Prototype detection range, about 5–6 m (low-speed demonstration)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">92%</div>
+          <div class="stat-label">Detection Accuracy</div>
+          <div class="stat-desc">Evaluated on custom road hazard &amp; animal classes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">Front + Side</div>
+          <div class="stat-label">Hazard Awareness</div>
+          <div class="stat-desc">Camera vision fused with 24 GHz microwave Doppler radar</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">Day + Night</div>
+          <div class="stat-label">Active IR Assist</div>
+          <div class="stat-desc">Automated 850 nm high-power infrared illumination below luminance limit</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">Ultra-Low Cost</div>
+          <div class="stat-label">Accessible Hardware</div>
+          <div class="stat-desc">Engineered for Raspberry Pi Zero W &amp; ESP32-CAM edge boards</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Simulation Section -->
+  <section id="simulation" class="section simulation-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Interactive In-Car Simulator</span>
+        <h2 class="section-title">See How ADAS+ Operates Inside a Car</h2>
+        <p class="section-description">
+          Watch the real-time perception loop in action. Compare how the active prototype warns the driver versus how a planned future emergency braking concept would behave.
+        </p>
+      </div>
+
+      <div class="simulation-card">
+        <!-- Sim Controls Bar -->
+        <div class="sim-controls-bar">
+          <div class="mode-toggle-group" role="group" aria-label="Simulation Mode Selector">
+            <button id="btnModePrototype" class="mode-btn mode-prototype active" aria-pressed="true">
+              <span aria-hidden="true">🔔</span>
+              <span>Prototype: Warns Driver</span>
+            </button>
+            <button id="btnModePlanned" class="mode-btn mode-planned" aria-pressed="false">
+              <span aria-hidden="true">🛑</span>
+              <span>Planned: Auto-Brake (Concept)</span>
+            </button>
+          </div>
+
+          <div class="sim-speed-control">
+            <label for="speedSlider" class="speed-label">Speed: <strong id="speedSliderVal">10 km/h</strong></label>
+            <input type="range" id="speedSlider" min="5" max="25" step="1" value="10" class="speed-slider" aria-label="Vehicle speed control">
+          </div>
+
+          <div class="sim-toggles">
+            <button id="btnToggleNight" class="control-btn" aria-label="Toggle Night Mode with Infrared Illumination">
+              <span>🌙 Night + IR</span>
+            </button>
+            <button id="btnPlayPause" class="control-btn" aria-label="Pause or resume live simulation">
+              <span>⏸ Pause</span>
+            </button>
+            <button id="btnResetSim" class="control-btn" aria-label="Reset simulation cycle">
+              <span>🔄 Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sim Dual Viewport Grid -->
+        <div class="sim-arena-grid">
+          <!-- Pane 1: Top-Down Aerial View -->
+          <div class="sim-pane">
+            <div class="pane-header">
+              <span class="pane-badge">Top View</span>
+              <span>Roadway &amp; Sensor Coverage</span>
+            </div>
+            <canvas id="topViewCanvas" class="sim-canvas" width="400" height="480" aria-label="Bird's-eye top view of vehicle driving down road with crossing animals"></canvas>
+          </div>
+
+          <!-- Pane 2: Driver Windshield Perspective View -->
+          <div class="sim-pane">
+            <div class="pane-header">
+              <span class="pane-badge">Driver's View</span>
+              <span>Windshield Perspective &amp; Cluster</span>
+            </div>
+            <div id="windshieldFlash" class="windshield-flash-overlay" aria-hidden="true"></div>
+            <canvas id="driverViewCanvas" class="sim-canvas" width="600" height="480" aria-label="Driver windshield perspective view with detected obstacle bounding box and vehicle dashboard speedometer"></canvas>
+          </div>
+        </div>
+
+        <!-- Telemetry HUD Bar (6 Columns) -->
+        <div class="sim-telemetry-hud">
+          <div class="hud-item">
+            <span class="hud-label">ADAS+ State</span>
+            <div id="hudStatePill" class="hud-state-pill state-clear">CLEAR</div>
+          </div>
+          <div class="hud-item">
+            <span class="hud-label">Proximity Range</span>
+            <div id="hudDistanceVal" class="hud-value">-- m</div>
+          </div>
+          <div class="hud-item">
+            <span class="hud-label">Vehicle Speed</span>
+            <div id="hudSpeedVal" class="hud-value">10 km/h</div>
+          </div>
+          <div class="hud-item">
+            <span class="hud-label">Warning Time</span>
+            <div id="hudWarningTimeVal" class="hud-value">-- s</div>
+          </div>
+          <div class="hud-item">
+            <span class="hud-label">Est. Stopping Dist.</span>
+            <div id="hudStoppingVal" class="hud-value">2.6 m</div>
+          </div>
+          <div class="hud-item">
+            <span class="hud-label">Buzzer Alert</span>
+            <div id="hudBuzzerVal" class="hud-value" style="font-size: 0.95rem; color: var(--text-muted);">Silent (Clear)</div>
+          </div>
+        </div>
+
+        <!-- Event Outcome Bar -->
+        <div class="sim-outcome-bar">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.35rem;">
+              <div id="simOutcomeText" class="outcome-text">
+                <span>🚗 Vehicle cruising at safe road speed. Monitoring for obstacles...</span>
+              </div>
+              <div id="simRangeCaption" class="sim-range-caption-box">
+                Detection range: about 6 m (prototype)
+              </div>
+            </div>
+            <div id="simOutcomeNote" class="outcome-mode-note">
+              Prototype Mode (5-6m range): Alerts driver only via buzzer. Human reaction latency (0.8s) governs braking.
+            </div>
+            <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: var(--text-secondary);">
+              <span style="font-weight: 700; color: var(--text-primary); text-transform: uppercase; font-size: 0.725rem; letter-spacing: 0.05em;">Scoreboard:</span>
+              <span id="hudScoreboardVal" style="font-family: var(--font-mono); font-weight: 700; color: var(--accent-cyan);">Stops: 0 | Cleared: 0 | Hits: 0</span>
+            </div>
+          </div>
+          <div class="illustrative-disclaimer-pill">
+            * Simulation values (speed, distance, stopping distance, warning time) are illustrative, not tested limits.
+          </div>
+        </div>
+        <div id="simLiveAnnouncer" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Decides Section -->
+  <section id="how-it-decides" class="section section-alt">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Perception Pipeline</span>
+        <h2 class="section-title">How ADAS+ Decides &amp; Warns</h2>
+        <p class="section-description">
+          A multi-threaded edge architecture coordinates computer vision, ultrasonic ranging, radar motion checking, and automated night illumination.
+        </p>
+      </div>
+
+      <div class="flow-grid">
+        <div class="flow-step-card">
+          <div class="flow-step-number">1</div>
+          <h3 class="flow-step-title">See</h3>
+          <p class="flow-step-desc">
+            ESP32-CAM wireless optical node captures frames using an OV2640 sensor and serves a low-latency HTTP MJPEG stream at 320×240 resolution.
+          </p>
+          <span class="flow-step-spec">ESP32-CAM :81/stream</span>
+        </div>
+
+        <div class="flow-step-card">
+          <div class="flow-step-number">2</div>
+          <h3 class="flow-step-title">Detect</h3>
+          <p class="flow-step-desc">
+            YOLOv3-Tiny runs inference on edge frames (192×192), filtering 14 road obstacle classes with a confidence threshold $\ge 28\%$.
+          </p>
+          <span class="flow-step-spec">Darknet / Ultralytics</span>
+        </div>
+
+        <div class="flow-step-card">
+          <div class="flow-step-number">3</div>
+          <h3 class="flow-step-title">Measure</h3>
+          <p class="flow-step-desc">
+            Vision target acquisition un-gates the HC-SR04 ultrasonic sensor. A 5-sample median filter smooths road bounce while the HB100 24 GHz Doppler radar validates motion.
+          </p>
+          <span class="flow-step-spec">5-Sample Median Filter</span>
+        </div>
+
+        <div class="flow-step-card">
+          <div class="flow-step-number">4</div>
+          <h3 class="flow-step-title">Decide</h3>
+          <p class="flow-step-desc">
+            State engine maps distance to hazard zones with a 2.5 s hysteresis grace period to eliminate alert flickering during road bumps.
+          </p>
+          <span class="flow-step-spec">&lt;3.0m Caution | &lt;1.5m Danger</span>
+        </div>
+
+        <div class="flow-step-card">
+          <div class="flow-step-number">5</div>
+          <h3 class="flow-step-title">Warn</h3>
+          <p class="flow-step-desc">
+            Triggers an active buzzer (pulsed chimes or continuous alarm tone), powers on 850 nm IR LEDs in dark conditions, and broadcasts telemetry to the web dashboard.
+          </p>
+          <span class="flow-step-spec">Buzzer (GPIO 18) + IR LED</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Inside the Prototype Section -->
+  <section id="hardware" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Current Prototype Hardware</span>
+        <h2 class="section-title">Inside the Working Prototype</h2>
+        <p class="section-description">
+          Verified components actively wired and executed in the experimental prototype codebase.
+        </p>
+      </div>
+
+      <div class="hardware-grid">
+        <div class="hardware-card">
+          <div>
+            <div class="hw-icon-box" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="4" y="4" width="16" height="16" rx="2"/>
+                <rect x="9" y="9" width="6" height="6"/>
+                <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>
+              </svg>
+            </div>
+            <h3 class="hw-title">Raspberry Pi Zero W / PC</h3>
+            <p class="hw-role">
+              Central edge computing host executing multi-threaded YOLOv3-Tiny inference, GPIO sensor polling, collision state logic, and the Flask web telemetry server.
+            </p>
+          </div>
+          <div class="hw-meta-row">
+            <span>Primary Platform</span>
+            <span class="hw-pin">Tested SBC</span>
+          </div>
+        </div>
+
+        <div class="hardware-card">
+          <div>
+            <div class="hw-icon-box" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <h3 class="hw-title">ESP32-CAM (OV2640)</h3>
+            <p class="hw-role">
+              Low-power wireless optical capture node providing high-throughput MJPEG video frames over 2.4 GHz local Wi-Fi to the central edge processor.
+            </p>
+          </div>
+          <div class="hw-meta-row">
+            <span>Optical Node</span>
+            <span class="hw-pin">HTTP :81/stream</span>
+          </div>
+        </div>
+
+        <div class="hardware-card">
+          <div>
+            <div class="hw-icon-box" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a14.5 14.5 0 0 0 0 20M2 12a14.5 14.5 0 0 0 20 0"/>
+              </svg>
+            </div>
+            <h3 class="hw-title">HC-SR04 Ultrasonic Sensor</h3>
+            <p class="hw-role">
+              Precision short-range distance measurement (2 cm to 400 cm) to confirmed obstacles; gated by visual target detection with 5-sample median noise filtering.
+            </p>
+          </div>
+          <div class="hw-meta-row">
+            <span>Range Sensor</span>
+            <span class="hw-pin">GPIO 23 (Trig) / 24 (Echo)</span>
+          </div>
+        </div>
+
+        <div class="hardware-card">
+          <div>
+            <div class="hw-icon-box" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
+            <h3 class="hw-title">HB100 24 GHz Doppler Radar</h3>
+            <p class="hw-role">
+              Microwave motion sensing operating at 24.125 GHz; validates physical obstacle movement independently of ambient optical glare, fog, or dust.
+            </p>
+          </div>
+          <div class="hw-meta-row">
+            <span>Motion Radar</span>
+            <span class="hw-pin">GPIO 25 (Motion In)</span>
+          </div>
+        </div>
+
+        <div class="hardware-card">
+          <div>
+            <div class="hw-icon-box" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              </svg>
+            </div>
+            <h3 class="hw-title">850 nm High-Power IR LED Board</h3>
+            <p class="hw-role">
+              Active night-vision illuminator automatically energized via GPIO 12 when camera frame grayscale luminance drops below safety threshold (&lt;55).
+            </p>
+          </div>
+          <div class="hw-meta-row">
+            <span>Night Assist</span>
+            <span class="hw-pin">GPIO 12 (Driver Out)</span>
+          </div>
+        </div>
+
+        <div class="hardware-card">
+          <div>
+            <div class="hw-icon-box" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              </svg>
+            </div>
+            <h3 class="hw-title">Active Buzzer</h3>
+            <p class="hw-role">
+              Acoustic collision warning actuator delivering graded driver alerts: intermittent pulsed warning tones in Caution zone and a continuous tone in Danger zone.
+            </p>
+          </div>
+          <div class="hw-meta-row">
+            <span>Audio Alert</span>
+            <span class="hw-pin">GPIO 18 (Buzzer Out)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results Section -->
+  <section id="results" class="section section-alt">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Empirical Benchmarks</span>
+        <h2 class="section-title">Results &amp; Performance Metrics</h2>
+        <p class="section-description">
+          Real numbers derived from test procedures in <code>docs/results.md</code>. Results come from the current prototype hardware and may change with future hardware.
+        </p>
+      </div>
+
+      <div class="results-grid">
+        <div class="result-card">
+          <div class="result-val">92%</div>
+          <div class="result-title">Detection Accuracy</div>
+          <div class="result-sub">Validated across target road obstacles &amp; animals</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-val">22–30</div>
+          <div class="result-title">Inference FPS (RPi 4)</div>
+          <div class="result-sub">YOLOv3-Tiny at 192×192 input resolution</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-val">&gt;88%</div>
+          <div class="result-title">Detection Precision</div>
+          <div class="result-sub">mAP@0.5 on target obstacle classes</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-val">±1 cm</div>
+          <div class="result-title">Ultrasonic Accuracy</div>
+          <div class="result-sub">HC-SR04 ranging accuracy up to 3.5 m</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-val">&lt;100 ms</div>
+          <div class="result-title">Radar Trigger Latency</div>
+          <div class="result-sub">Binary Doppler microwave motion response</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-val">&lt;120 ms</div>
+          <div class="result-title">Stream Latency</div>
+          <div class="result-sub">ESP32-CAM to dashboard browser display</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-val">1–2 FPS</div>
+          <div class="result-title">FPS (RPi Zero W)</div>
+          <div class="result-sub">1.5s detection polling; 10–15 FPS camera stream</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-val">91.7%</div>
+          <div class="result-title">Detection Recall</div>
+          <div class="result-sub">Validated across target obstacle &amp; animal classes</div>
+        </div>
+      </div>
+
+      <div class="results-disclaimer-box">
+        <strong>Hardware Context:</strong> Results come from the current prototype hardware and may change with future hardware iterations.
+      </div>
+    </div>
+  </section>
+
+  <!-- Prototype vs Planned Comparison Section -->
+  <section id="prototype-vs-planned" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Architecture Roadmap</span>
+        <h2 class="section-title">Today's Prototype vs. Planned Concept</h2>
+        <p class="section-description">
+          Honest boundary between the working experimental prototype and future production upgrades.
+        </p>
+      </div>
+
+      <div class="comparison-grid">
+        <!-- Working Prototype Column -->
+        <div class="comparison-col col-prototype">
+          <div class="col-header">
+            <h3 class="col-heading">Today: Working Prototype</h3>
+            <span class="pill pill-prototype">Built &amp; Verified</span>
+          </div>
+
+          <ul class="feature-list">
+            <li class="feature-item">
+              <span class="feature-icon-check">✓</span>
+              <span><strong>Detection Range:</strong> Prototype detection range is about 5–6 m; suited for low-speed demonstrations.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-check">✓</span>
+              <span><strong>Driver Alert Only:</strong> Warns driver via active buzzer chimes and web UI; does <em>NOT</em> apply vehicle brakes.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-check">✓</span>
+              <span><strong>Edge Computing Node:</strong> Raspberry Pi Zero W / PC runs multi-threaded detection and sensor fusion.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-check">✓</span>
+              <span><strong>Wireless Optical Node:</strong> ESP32-CAM streams MJPEG frames over 2.4 GHz local Wi-Fi.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-check">✓</span>
+              <span><strong>Sensor Fusion:</strong> HC-SR04 ultrasonic distance sensor with 5-sample median noise filtering and HB100 radar motion checking.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-check">✓</span>
+              <span><strong>Active Night Assist:</strong> 850 nm high-power IR LED board triggered automatically in low ambient light.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-check">✓</span>
+              <span><strong>Web Dashboard:</strong> Lightweight Flask HTTP server serving live stream and JSON telemetry API (<code>/status</code>).</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Planned Concept Column -->
+        <div class="comparison-col col-planned">
+          <div class="col-header">
+            <h3 class="col-heading">Planned, Not Built Yet</h3>
+            <span class="pill pill-planned">Planned Concept</span>
+          </div>
+
+          <ul class="feature-list">
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: Target Detection Range (100–120 m)</strong> — Target range 100–120 m with an automotive long-range radar, AI acceleration module, and low-light vision module (design target, not measured or built yet).</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: Automatic Emergency Braking (AEB) &amp; Seatbelt-Style Chime</strong> — Actuates vehicle braking systems automatically to halt car before impact while sounding a rapid seatbelt-style acoustic warning chime. (Planned concept, not built yet).</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: High-Performance Edge Computing Unit</strong> — Upgrade from Raspberry Pi Zero W for faster on-device inference and higher FPS.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: Dedicated AI Acceleration Module</strong> — Dedicated NPU to run detection in real time on the vehicle.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: Automotive Long-Range Radar Sensor</strong> — Replace HB100 radar with automotive-grade sensor for longer range and reliable distance data.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: Low-Light Vision Module</strong> — Replace ESP32-CAM and IR LED board with high-sensitivity low-light vision module for night detection.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: Waterproof Distance Sensor</strong> — Replace HC-SR04 with a waterproof short-range sensor for outdoor rain and dust resilience.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: Vehicle CAN Bus Interface Module</strong> — To connect directly with vehicle speedometers and ECU systems.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: Automotive Power Protection Unit</strong> — For stable and safe power conditioning from the 12V vehicle battery.</span>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon-planned">◷</span>
+              <span><strong>Planned: In-Vehicle Information Display</strong> — Intelligent driver alert display replacing the browser dashboard for cabin use.</span>
+            </li>
+          </ul>
+
+          <div class="cost-estimate-card">
+            <div class="cost-estimate-number">₹75,560 INR (Planning Estimate)</div>
+            <div>Estimated cost of the production-grade hardware version is about INR 75,560 (planning estimate, not yet built or purchased).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section id="faq" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Frequently Asked Questions</span>
+        <h2 class="section-title">Common Questions &amp; Clarifications</h2>
+        <p class="section-description">
+          Clear answers about current prototype capabilities, planned upgrades, and simulation models.
+        </p>
+      </div>
+
+      <div class="faq-grid">
+        <div class="faq-card">
+          <h3 class="faq-q"><span class="faq-q-icon" aria-hidden="true">Q:</span> What is the detection range?</h3>
+          <p class="faq-a">
+            The current prototype detects at about 5–6 m, so it suits low-speed use. The planned production-grade version targets 100–120 m using upgraded hardware. That target has not been built or measured yet.
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <h3 class="faq-q"><span class="faq-q-icon" aria-hidden="true">Q:</span> Does it work at night?</h3>
+          <p class="faq-a">
+            In the prototype, night operation relies on automated 850 nm high-power IR LED illumination triggered when camera luminance drops below threshold (&lt;55), functioning within the prototype's short 5–6 m range. The planned version targets an automotive-grade low-light vision module for extended range (design target, not measured).
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <h3 class="faq-q"><span class="faq-q-icon" aria-hidden="true">Q:</span> Are the numbers in the simulation real?</h3>
+          <p class="faq-a">
+            Simulation speeds, distances, stopping times, and warning levels are illustrative engineering models to demonstrate perception and braking concepts, not tested physical limits. The prototype range of about 5–6 m is the owner's stated figure; the 100–120 m figure is an unbuilt future design target.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo Video Section -->
+  <section id="demo" class="section section-alt">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Video Demonstration</span>
+        <h2 class="section-title">Prototype Bench &amp; Road Demonstration</h2>
+        <p class="section-description">
+          Demonstration recordings showcasing live edge object classification, distance measurement, and warning triggers.
+        </p>
+      </div>
+
+      <div class="demo-video-card">
+        <svg class="demo-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/>
+        </svg>
+        <h3 class="demo-title">Demonstration Video Recording</h3>
+        <p class="demo-desc">
+          High-resolution demonstration footage of the ADAS+ detection pipeline will be linked here once external hosting is finalized.
+        </p>
+        <div class="demo-todo-tag" style="color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.35);">
+          ✓ Tested Prototype Demo Recording (Video link being hosted)
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Clone Helper Section -->
+  <section class="section" style="padding: 2.5rem 0;">
+    <div class="container" style="max-width: 800px; text-align: center;">
+      <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 0.75rem;">Get Started with ADAS-Plus</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 1.25rem; font-size: 0.95rem;">
+        Clone the repository and run obstacle detection with Python 3.8+ on your edge device or PC.
+      </p>
+      <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem 1.25rem; font-family: var(--font-mono); font-size: 0.875rem;">
+        <span id="cloneCommandText">git clone https://github.com/dvsh03/ADAS-Plus.git</span>
+        <button id="copyCloneBtn" style="background: var(--accent-blue); color: #fff; font-size: 0.8rem; font-weight: 600; padding: 0.35rem 0.85rem; border-radius: var(--radius-sm);">
+          Copy
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-top">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <svg style="width: 1.75rem; height: 1.75rem;" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="64" height="64" rx="16" fill="#1e293b"/>
+              <path d="M32 12 L48 18 C48 34 32 46 32 52 C32 46 16 34 16 18 Z" stroke="#3b82f6" stroke-width="3.5" stroke-linejoin="round"/>
+              <circle cx="32" cy="34" r="4.5" fill="#10b981"/>
+            </svg>
+            <span style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">ADAS-Plus</span>
+          </div>
+          <p class="footer-brand-desc">
+            Experimental low-cost Advanced Driver Assistance System perception platform engineered for roadway animal and obstacle warning.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="footer-col-title">Project Team</h4>
+          <ul class="team-list">
+            <li><a href="https://github.com/dvsh03" target="_blank" rel="noopener noreferrer">Devesh Kumar Dilliwar</a></li>
+            <li><a href="https://github.com/AadarshSoni24" target="_blank" rel="noopener noreferrer">Aadarsh Kumar Soni</a></li>
+            <li><a href="https://github.com/Utkrish26" target="_blank" rel="noopener noreferrer">Utkrish Panchal</a></li>
+            <li><a href="https://github.com/handler002" target="_blank" rel="noopener noreferrer">Sahil Janghel</a></li>
+            <li><a href="https://github.com/omichoubey793-png" target="_blank" rel="noopener noreferrer">Omi Choubey</a></li>
+            <li><a href="https://github.com/Rahulpure01" target="_blank" rel="noopener noreferrer">Rahul Chinchmalatpure</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-col-title">Repository</h4>
+          <ul class="footer-links-list">
+            <li><a href="https://github.com/dvsh03/ADAS-Plus" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
+            <li><a href="https://github.com/dvsh03/ADAS-Plus/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Restricted Use License</a></li>
+            <li><a href="https://github.com/dvsh03/ADAS-Plus/tree/main/docs" target="_blank" rel="noopener noreferrer">Technical Documentation</a></li>
+            <li><a href="./404.html">404 Error Page</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          &copy; 2026 ADAS-Plus Contributors. Distributed under the ADAS+ Restricted Use License (Academic &amp; Non-Commercial).
+        </div>
+        <div class="footer-disclaimer-notice">
+          ⚠️ Experimental prototype. Features marked as planned are not built yet.
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+  <script src="js/simulation.js"></script>
+</body>
+</html>

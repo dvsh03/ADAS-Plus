@@ -10,9 +10,16 @@
 
 ---
 
+## 🌐 Live Demo
+
+Interactive explainer: see how ADAS+ works inside a car: [https://dvsh03.github.io/ADAS-Plus/](https://dvsh03.github.io/ADAS-Plus/)
+
+---
+
 ## 📌 Features
 
 - **Real-Time Obstacle Detection**: Powered by YOLOv3-Tiny / Ultralytics YOLO for low-latency vehicle and pedestrian detection on edge hardware.
+- **Prototype Detection Range**: About 5–6 m (system detection window suited for low-speed demonstrations).
 - **Sensor Fusion**: Integrates distance measurement from HC-SR04 Ultrasonic & HB100 Doppler Radar for precise proximity estimation.
 - **ESP32-CAM Live Video Stream**: High-performance HTTP MJPEG video pipeline from wireless camera nodes.
 - **Audio-Visual Hazard Warning**: Real-time alerts via IR LEDs and active buzzers when safety thresholds are breached.
@@ -26,7 +33,7 @@
 ADAS-Plus/
 │
 ├── README.md                  # Main project documentation
-├── LICENSE                    # MIT License
+├── LICENSE                    # Restricted Use License (Academic & Non-Commercial)
 ├── .gitignore                 # Git ignore rules for datasets & models
 ├── requirements.txt           # Python dependencies
 ├── data.yaml                  # YOLO dataset configuration
@@ -62,7 +69,7 @@ ADAS-Plus/
 
 ### 1. Prerequisites
 
-- **Hardware**: Raspberry Pi (3B+/4/5) or PC with Python 3.8+, ESP32-CAM module, HC-SR04 Ultrasonic Sensor, HB100 Radar, Active Buzzer.
+- **Hardware**: Raspberry Pi Zero W (tested board), Raspberry Pi (3B+/4/5) or PC with Python 3.8+, ESP32-CAM module, HC-SR04 Ultrasonic Sensor, HB100 Radar, Active Buzzer.
 - **Software**: Python 3.8+, OpenCV, Ultralytics PyTorch, Flask, requests, pyttsx3.
 
 ### 2. Installation
@@ -95,6 +102,20 @@ Open your browser and navigate to `http://localhost:5000` to view the live ADAS 
 - [Testing & Benchmarks](docs/testing.md)
 - [Results & Performance Metrics](docs/results.md)
 - [Safety & Reliability Guidelines](docs/safety.md)
+
+---
+
+## ⚠️ Limitations & Future Work
+
+### Limitations
+- **Prototype Detection Range**: Prototype detection range is about 5-6 m, so it is suited to low-speed demonstrations.
+- **Monocular Vision**: Relies on a single camera node without stereoscopic disparity; depth perception is gated by ultrasonic ranging.
+- **Lighting Sensitivity**: Vision requires ambient illumination or close-range auxiliary 850 nm IR LED lighting for night-time operation.
+
+### Future Work
+- Planned: extend detection range to a target of 100-120 m with an automotive long-range radar, an AI acceleration module and a low-light vision module (target only, not yet built or measured).
+- Planned: Automatic Emergency Braking (AEB) interface with cabin audio chimes.
+- Planned: Vehicle CAN bus communication interface.
 
 ---
 
